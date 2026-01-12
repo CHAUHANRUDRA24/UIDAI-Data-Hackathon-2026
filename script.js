@@ -21,7 +21,7 @@ const progressPercent = document.getElementById('progressPercent');
 const progressFill = document.getElementById('progressFill');
 
 // Configuration
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB in bytes
 const ALLOWED_TYPES = {
     csv: ['text/csv', 'application/vnd.ms-excel'],
     zip: ['application/zip', 'application/x-zip-compressed', 'application/x-zip']
@@ -63,9 +63,17 @@ function isZipFile(file) {
  * Validate the selected file
  */
 function validateFile(file) {
-    if (!file) return { isValid: false, error: 'No file selected' };
-    if (!isCsvFile(file) && !isZipFile(file)) return { isValid: false, error: 'Please select a CSV or ZIP file' };
-    if (file.size > MAX_FILE_SIZE) return { isValid: false, error: 'File size must be less than 25MB' };
+    if (!file) {
+        return { isValid: false, error: 'No file selected' };
+    }
+
+    if (!isCsvFile(file) && !isZipFile(file)) {
+        return { isValid: false, error: 'Please select a CSV or ZIP file' };
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+        return { isValid: false, error: 'File size must be less than 1GB' };
+    }
     return { isValid: true, error: null };
 }
 
@@ -218,7 +226,29 @@ async function uploadFile() {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
 
-        // Logic (Data Parsing)
+        // In a real application, you would:
+        // const formData = new FormData();
+        // formData.append('file', selectedFile);
+        //
+        // const xhr = new XMLHttpRequest();
+        // xhr.upload.addEventListener('progress', (e) => {
+        //     if (e.lengthComputable) {
+        //         updateProgress((e.loaded / e.total) * 100);
+        //     }
+        // });
+        //
+        // xhr.open('POST', '/api/upload');
+        // xhr.send(formData);
+
+        // Update UI to show processing state
+        document.querySelector('.uploading-title').textContent = 'Processing Data...';
+        document.querySelector('.uploading-subtitle').textContent = 'Analyzing standard and large datasets. This may take a moment.';
+        document.querySelector('.progress-status span').textContent = 'Aggregating records...';
+
+        // Keep progress at 100% visually or indeterminate
+        updateProgress(100);
+
+        // Stream Parse and Aggregate Data
         try {
             let globalAggregates = {};
             let globalAgeCols = [];
@@ -275,6 +305,13 @@ async function uploadFile() {
                 await processFileStream(file);
             }
 
+            // Check if we actually found valid data
+            if (!stateCol || globalAgeCols.length === 0) {
+                showError('Could not identify "State" or "Age" columns in the CSV. Please check the file format.');
+                hideUploadingCard();
+                return;
+            }
+
             const processedData = Object.values(globalAggregates);
 
             if (processedData.length > 0) {
@@ -293,13 +330,16 @@ async function uploadFile() {
                     window.location.href = 'dashboard.html';
                 }, 1000);
 
+
             } else {
+                hideUploadingCard();
                 showError('No valid data found in the selected file(s).');
                 hideUploadingCard();
             }
 
         } catch (err) {
             console.error('Processing error:', err);
+            hideUploadingCard();
             showError('Error processing file data.');
             hideUploadingCard();
         }

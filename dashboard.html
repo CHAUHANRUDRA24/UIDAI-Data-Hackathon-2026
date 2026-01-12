@@ -195,90 +195,114 @@
                                 <div class="tag-pill blue">High Volume</div>
                             </div>
                         </div>
+
+                        <!-- Injected Insights (User Feature) -->
+                        <div id="insightsContainer" class="insights-grid" style="margin-top: 1.5rem;"></div>
+
                         <div class="accordion-footer">
                             <a href="#" class="link-btn">View Detailed Report →</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 2: Trends That Matter (User's Workspace) -->
-                <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleAccordion(this)">
-                        <div class="accordion-title-group">
-                            <span class="accordion-icon blue"> #2 </span>
-                            <h3>Second Layer: Trends That Matter</h3>
-                        </div>
-                        <span class="accordion-chevron">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                        </span>
+            </div>
+
+            <!-- Section 2: Trends That Matter (User's Workspace) -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <div class="accordion-title-group">
+                        <span class="accordion-icon blue"> #2 </span>
+                        <h3>Second Layer: Trends That Matter</h3>
                     </div>
-                    <div class="accordion-body hidden-charts-area">
-                        <!-- All 4 Charts Required by User -->
-                        <div class="charts-grid-2">
-                            <!-- Chart 1: Enrolment Trends -->
-                            <div class="chart-card">
-                                <div class="chart-header">
-                                    <h3>Enrolment Growth</h3>
-                                </div>
-                                <div class="chart-body">
-                                    <canvas id="enrolmentTrendChart"></canvas>
-                                </div>
-                                <div class="chart-footer">
-                                    <p class="chart-explanation">Enrolment activity peaks between March-May every year.
-                                    </p>
-                                </div>
+                    <span class="accordion-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="accordion-body hidden-charts-area">
+                    <!-- All 4 Charts Required by User -->
+                    <div class="charts-grid-2">
+                        <!-- Chart 1: Enrolment Trends -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Enrolment Growth</h3>
                             </div>
-
-                            <!-- Chart 2: Update Trends -->
-                            <div class="chart-card">
-                                <div class="chart-header">
-                                    <h3>Updates Over Time</h3>
-                                </div>
-                                <div class="chart-body">
-                                    <canvas id="updatesTrendChart"></canvas>
-                                </div>
-                                <div class="chart-footer">
-                                    <p class="chart-explanation">Biometric updates show a steady 15% increase.</p>
-                                </div>
+                            <div class="chart-body">
+                                <canvas id="enrolmentTrendChart"></canvas>
                             </div>
-
-                            <!-- Chart 3: Region-wise Activity -->
-                            <div class="chart-card wide">
-                                <div class="chart-header">
-                                    <h3>Region-wise Activity</h3>
-                                </div>
-                                <div class="chart-body">
-                                    <canvas id="regionBarChart"></canvas>
-                                </div>
-                                <div class="chart-footer">
-                                    <p class="chart-explanation">Northern states contribute 45% of total document
-                                        updates.</p>
-                                </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Enrolment activity peaks between March-May every year.
+                                </p>
                             </div>
+                        </div>
 
-                            <!-- Chart 4: Demographic vs Biometric -->
-                            <div class="chart-card">
-                                <div class="chart-header">
-                                    <h3>Update Distribution</h3>
-                                </div>
-                                <div class="chart-body">
-                                    <canvas id="updateTypeChart"></canvas>
-                                </div>
-                                <div class="chart-footer">
-                                    <p class="chart-explanation">Demographic changes outweigh biometric updates by 2:1.
-                                    </p>
-                                </div>
+                        <!-- Chart 2: Update Trends -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Updates Over Time</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="updatesTrendChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Biometric updates show a steady 15% increase.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Region-wise Activity -->
+                        <div class="chart-card wide">
+                            <div class="chart-header">
+                                <h3>Region-wise Activity</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="regionBarChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Northern states contribute 45% of total document
+                                    updates.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart 4: Demographic vs Biometric -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Update Distribution</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="updateTypeChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Demographic changes outweigh biometric updates by 2:1.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
-        </main>
+
+            <!-- Section 3: Custom Algorithms (User Feature) -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <div class="accordion-title-group">
+                        <span class="accordion-icon blue"> #3 </span>
+                        <h3>Third Layer: AI Insights</h3>
+                    </div>
+                    <span class="accordion-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="accordion-body">
+                    <div id="customAlgorithmsContainer" class="algorithms-grid"></div>
+                </div>
+            </div>
+
+    </div>
+    </main>
     </div>
 
     <!-- Scripts -->
