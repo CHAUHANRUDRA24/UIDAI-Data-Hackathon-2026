@@ -156,17 +156,49 @@ function formatNumber(num) {
 
 function updateSummaryStats(data) {
     const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
+
+    // Mock Updates Logic (as ~22% of total for demo purposes)
+    const totalUpdates = Math.floor(totalEnrolment * 0.22);
+
+    // Calculate Demo (0-5) vs Biometric (5+) Proxy
+    let demoCount = 0;
+    let bioCount = 0;
+
+    data.forEach(item => {
+        // Iterate breakdown keys
+        if (item.breakdown) {
+            Object.keys(item.breakdown).forEach(key => {
+                const val = item.breakdown[key];
+                if (key.includes('0_5')) {
+                    demoCount += val;
+                } else {
+                    bioCount += val; // Assume all others 5+ have biometrics
+                }
+            });
+        }
+    });
+
+    const demoPct = Math.round((demoCount / totalEnrolment) * 100) || 0;
+    const bioPct = 100 - demoPct;
+
     const topState = data[0];
-    const bottomState = data[data.length - 1];
 
-    document.getElementById('totalEnrolments').textContent = formatNumber(totalEnrolment);
-    document.getElementById('totalStatesSubtitle').textContent = `Across ${data.length} states/UTs`;
+    // Update DOM
+    const elTotal = document.getElementById('totalEnrolments');
+    if (elTotal) elTotal.textContent = formatNumber(totalEnrolment);
 
+    const elUpdates = document.getElementById('totalUpdates');
+    if (elUpdates) elUpdates.textContent = formatNumber(totalUpdates);
+
+    // Update Split Bar
+    document.getElementById('demoPercent').textContent = `${demoPct}%`;
+    document.getElementById('bioPercent').textContent = `${bioPct}%`;
+    document.getElementById('demoBar').style.width = `${demoPct}%`;
+    document.getElementById('bioBar').style.width = `${bioPct}%`;
+
+    // Top State
     document.getElementById('topState').textContent = topState.state;
     document.getElementById('topStateVal').textContent = `${formatNumber(topState.total)} enrolments`;
-
-    document.getElementById('bottomState').textContent = bottomState.state;
-    document.getElementById('bottomStateVal').textContent = `${formatNumber(bottomState.total)} enrolments`;
 }
 
 function renderBarChart(data) {
@@ -420,18 +452,11 @@ function setupActionButtons(data, ageCols) {
                         // Encrypt
                         // Note: pdf-lib encryption requires specific permission constants or just generic settings
                         // For simplicity in this version, we will just set passwords which implies standard permissions
-                        pdfDoc.encrypt({
+                        // Encrypt
+                        await pdfDoc.encrypt({
                             userPassword: password,
-                            ownerPassword: password,
-                            permissions: {
-                                printing: 'highResolution',
-                                modifying: false,
-                                copying: false,
-                                annotating: false,
-                                fillingForms: false,
-                                contentAccessibility: false,
-                                documentAssembly: false,
-                            },
+                            ownerPassword: password
+                            // permissions: defaults apply (printing allowed, copying allowed usually unless restricted)
                         });
 
                         const encryptedPdf = await pdfDoc.save();

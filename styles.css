@@ -1112,6 +1112,39 @@ body {
 
 .trend-up {
     color: var(--success-color);
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.trend-down {
+    color: #ef4444;
+    /* Red-500 */
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.stat-subtext {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    /* Slate-400 */
+    margin-top: 0.25rem;
+}
+
+/* Split Bar Animation */
+.split-bar-container {
+    position: relative;
+    width: 100%;
+}
+
+#demoBar,
+#bioBar {
+    transition: width 1s ease-out;
 }
 
 .loading-state {

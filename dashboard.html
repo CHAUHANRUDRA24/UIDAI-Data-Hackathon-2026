@@ -63,25 +63,67 @@
         <!-- Main Content -->
         <div id="dashboardContent">
             <!-- Summary Stats -->
+            <!-- KPI Cards: Top Layer -->
             <div class="stats-grid">
+                <!-- Card 1: Total Enrolments -->
                 <div class="stat-card">
                     <p class="stat-label">Total Enrolments</p>
-                    <p class="stat-value" id="totalEnrolments">-</p>
-                    <div class="stat-trend" id="totalStatesSubtitle">
-                        Across - states
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                        <p class="stat-value" id="totalEnrolments">-</p>
+                        <span class="stat-trend trend-up">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="19" x2="12" y2="5"></line>
+                                <polyline points="5 12 12 5 19 12"></polyline>
+                            </svg>
+                            12.5%
+                        </span>
                     </div>
+                    <div class="stat-subtext">vs previous period</div>
                 </div>
+
+                <!-- Card 2: Total Updates (Mock/Projected) -->
                 <div class="stat-card">
-                    <p class="stat-label">Top Performing State</p>
-                    <p class="stat-value" id="topState">-</p>
-                    <div class="stat-trend trend-up" id="topStateVal">
-                        - enrolments
+                    <p class="stat-label">Total Updates</p>
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                        <p class="stat-value" id="totalUpdates">-</p>
+                        <span class="stat-trend trend-down">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <polyline points="19 12 12 19 5 12"></polyline>
+                            </svg>
+                            2.1%
+                        </span>
                     </div>
+                    <div class="stat-subtext">vs previous period</div>
                 </div>
+
+                <!-- Card 3: Demographic vs Biometric -->
                 <div class="stat-card">
-                    <p class="stat-label">Lowest Enrolment State</p>
-                    <p class="stat-value" id="bottomState">-</p>
-                    <div class="stat-trend" style="color: #ef4444;" id="bottomStateVal">
+                    <p class="stat-label">Demo vs Biometric Split</p>
+                    <div class="split-bar-container" style="margin-top: 0.5rem;">
+                        <div class="split-info"
+                            style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                            <span style="color: #3b82f6;">Demo <span id="demoPercent">0%</span></span>
+                            <span style="color: #8b5cf6;">Bio <span id="bioPercent">0%</span></span>
+                        </div>
+                        <div
+                            style="height: 6px; width: 100%; background: #f1f5f9; border-radius: 3px; overflow: hidden; display: flex;">
+                            <div id="demoBar" style="width: 50%; background: #3b82f6; height: 100%;"></div>
+                            <div id="bioBar" style="width: 50%; background: #8b5cf6; height: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-subtext" style="margin-top: 0.5rem;">Based on age-group proxy</div>
+                </div>
+
+                <!-- Card 4: Highest Activity -->
+                <div class="stat-card">
+                    <p class="stat-label">Highest Activity Region</p>
+                    <p class="stat-value" id="topState" style="font-size: 1.25rem;">-</p>
+                    <div class="stat-subtext" id="topStateVal" style="color: #10b981; font-weight: 500;">
                         - enrolments
                     </div>
                 </div>
@@ -185,7 +227,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="dashboard.js"></script>
 </body>
 
