@@ -57,11 +57,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // 0. Check for Shared Snapshot param
-        // 0. Check for Shared Snapshot param
         const urlParams = new URLSearchParams(window.location.search);
         const snapshotCode = urlParams.get('snapshot');
 
-        if (snapshotCode) {
+        if (snapshotCode && typeof snapshotCode === 'string' && snapshotCode.trim() !== '') {
             console.log('Loading from snapshot...');
             try {
                 // Decode - handle potentially unclean URL strings or spaces
@@ -94,19 +93,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rawData = await getDataFromDB();
 
         if (!rawData || !rawData.data || !Array.isArray(rawData.data)) {
-            console.warn('Invalid data format in DB');
+            console.warn('Invalid data format in DB or no data found');
             window.location.href = 'index.html';
             return;
         }
 
         const processedData = rawData.data;
-        const ageCols = rawData.metadata.ageCols;
+        const ageCols = (rawData.metadata && rawData.metadata.ageCols) ? rawData.metadata.ageCols : [];
 
-        // 4. Update UI
-        // 4. Update UI
-        // 4. Update UI
-        updateSummaryStats(processedData);
-
+        // Update UI
         updateSummaryStats(processedData);
         generateInsights(processedData, ageCols);
 
@@ -289,6 +284,13 @@ function renderBarChart(data) {
 
 function renderHeatmap(data, ageCols) {
     const container = document.getElementById('heatmapContainer');
+    if (!container) return;
+
+    // Handle empty ageCols case
+    if (!ageCols || ageCols.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 2rem; color: #64748b;">No age group columns available for heatmap visualization.</div>';
+        return;
+    }
 
     // Create Table
     const table = document.createElement('table');
@@ -322,7 +324,8 @@ function renderHeatmap(data, ageCols) {
     let maxVal = 0;
     data.forEach(row => {
         ageCols.forEach(col => {
-            if (row.breakdown[col] > maxVal) maxVal = row.breakdown[col];
+            const val = (row.breakdown && row.breakdown[col]) ? row.breakdown[col] : 0;
+            if (val > maxVal) maxVal = val;
         });
     });
 
@@ -337,7 +340,7 @@ function renderHeatmap(data, ageCols) {
 
         // Value Cells
         ageCols.forEach(col => {
-            const val = row.breakdown[col];
+            const val = (row.breakdown && row.breakdown[col]) ? row.breakdown[col] : 0;
             const td = document.createElement('td');
             td.textContent = formatNumber(val);
             td.title = val.toLocaleString(); // Tooltip
@@ -377,13 +380,21 @@ function generateInsights(data, ageCols) {
     const topState = data[0];
     const bottomState = data[data.length - 1];
 
+    // Handle empty ageCols case
+    if (!ageCols || ageCols.length === 0) {
+        insightText.textContent = `${topState.state} leads with ${formatNumber(topState.total)} enrolments, while ${bottomState.state} requires focused intervention.`;
+        return;
+    }
+
     // Find dominant age group globally
     let ageSums = {};
     ageCols.forEach(col => ageSums[col] = 0);
 
     data.forEach(row => {
         ageCols.forEach(col => {
-            ageSums[col] += row.breakdown[col];
+            if (row.breakdown && row.breakdown[col]) {
+                ageSums[col] += row.breakdown[col];
+            }
         });
     });
 
@@ -397,7 +408,8 @@ function generateInsights(data, ageCols) {
         }
     }
 
-    const displayAge = dominantAgeCol.replace(/_/g, '-').replace('age-', '').replace('age', '');
+    // Safe replace with null check
+    const displayAge = dominantAgeCol ? dominantAgeCol.replace(/_/g, '-').replace('age-', '').replace('age', '') : 'all ages';
 
     // Dynamic message
     insightText.textContent = `
