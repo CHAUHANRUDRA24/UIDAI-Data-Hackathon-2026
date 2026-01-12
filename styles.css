@@ -306,3 +306,56 @@ body {
     color: #64748b;
     margin-bottom: 1rem;
 }
+/* Schema UI Extensions */
+.file-accordion-item {
+    border: 1px solid var(--c-border-dashed);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.2s;
+}
+.file-accordion-item.active {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-color: var(--c-primary-light);
+}
+.file-accordion-header {
+    padding: 1rem;
+    background: #f8fafc;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid transparent;
+}
+.file-accordion-item.active .file-accordion-header {
+    border-bottom-color: var(--c-border-dashed);
+    background: #eff6ff;
+}
+.file-accordion-body {
+    display: none;
+    max-height: 400px;
+    overflow: auto;
+}
+.file-accordion-item.active .file-accordion-body {
+    display: block;
+}
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.preview-table th, .preview-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--c-border-dashed);
+    text-align: left;
+    white-space: nowrap;
+}
+.preview-table th {
+    background: #f8fafc;
+    color: var(--c-text-sub);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+

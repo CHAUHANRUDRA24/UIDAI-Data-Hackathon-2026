@@ -1,6 +1,6 @@
 /**
  * UIDAI CSV/ZIP Upload Component
- * Handles drag-and-drop file upload with ZIP extraction functionality
+ * Handles drag-and-drop file upload with Schema Validation
  */
 
 // DOM Elements
@@ -14,14 +14,26 @@ const removeBtn = document.getElementById('removeBtn');
 const uploadBtn = document.getElementById('uploadBtn');
 const successModal = document.getElementById('successModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
-
-// Uploading elements (Inline Progress)
-const uploadingCard = document.getElementById('uploadingCard'); // This is now the progress container
+const uploadingCard = document.getElementById('uploadingCard');
 const progressPercent = document.getElementById('progressPercent');
 const progressFill = document.getElementById('progressFill');
 
+// Schema UI Elements
+const schemaContainer = document.getElementById('schemaContainer');
+const detectedFilesContainer = document.getElementById('detectedFilesContainer');
+const mapDate = document.getElementById('mapDate');
+const mapState = document.getElementById('mapState');
+const mapDistrict = document.getElementById('mapDistrict');
+const mapPincode = document.getElementById('mapPincode');
+const ageColsTags = document.getElementById('ageColsTags');
+const cancelSchemaBtn = document.getElementById('cancelSchemaBtn');
+const proceedToDashboardBtn = document.getElementById('proceedToDashboardBtn');
+
+// Upload Card (Main)
+const mainUploadCard = document.querySelector('.upload-card:not(.schema-card-wide)');
+
 // Configuration
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_TYPES = {
     csv: ['text/csv', 'application/vnd.ms-excel'],
     zip: ['application/zip', 'application/x-zip-compressed', 'application/x-zip']
@@ -29,14 +41,18 @@ const ALLOWED_TYPES = {
 
 // State
 let selectedFile = null;
-let extractedCsvFiles = [];
-let uploadCancelled = false;
+let extractedCsvFiles = []; // {name, size, content}
+let analysisState = {
+    files: [],
+    headers: [],
+    previewRows: []
+};
 
-/**
- * Format file size to human-readable format
- * @param {number} bytes - File size in bytes
- * @returns {string} Formatted file size
- */
+
+// ========================================
+// Helper Functions
+// ========================================
+
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -45,127 +61,19 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-/**
- * Check if file is a CSV
- */
 function isCsvFile(file) {
     return ALLOWED_TYPES.csv.includes(file.type) || file.name.toLowerCase().endsWith('.csv');
 }
 
-/**
- * Check if file is a ZIP
- */
 function isZipFile(file) {
     return ALLOWED_TYPES.zip.includes(file.type) || file.name.toLowerCase().endsWith('.zip');
 }
 
-/**
- * Validate the selected file
- */
-function validateFile(file) {
-    if (!file) return { isValid: false, error: 'No file selected' };
-    if (!isCsvFile(file) && !isZipFile(file)) return { isValid: false, error: 'Please select a CSV or ZIP file' };
-    if (file.size > MAX_FILE_SIZE) return { isValid: false, error: 'File size must be less than 25MB' };
-    return { isValid: true, error: null };
-}
-
-/**
- * Extract CSV files from ZIP
- */
-async function extractCsvFromZip(zipFile) {
-    const zip = new JSZip();
-    const contents = await zip.loadAsync(zipFile);
-    const csvFiles = [];
-
-    for (const [filename, file] of Object.entries(contents.files)) {
-        if (!file.dir && filename.toLowerCase().endsWith('.csv')) {
-            const content = await file.async('blob');
-            csvFiles.push({
-                name: filename,
-                size: content.size,
-                content: content
-            });
-        }
-    }
-    return csvFiles;
-}
-
-/**
- * Handle file selection
- */
-async function handleFileSelect(file) {
-    const validation = validateFile(file);
-
-    if (!validation.isValid) {
-        showError(validation.error);
-        return;
-    }
-
-    selectedFile = file;
-    extractedCsvFiles = [];
-
-    // Reset UI
-    if (uploadingCard) uploadingCard.style.display = 'none';
-
-    // Check ZIP
-    if (isZipFile(file)) {
-        try {
-            dropZone.style.opacity = '0.6';
-
-            extractedCsvFiles = await extractCsvFromZip(file);
-
-            dropZone.style.opacity = '1';
-
-            if (extractedCsvFiles.length === 0) {
-                showError('No CSV files found in the ZIP archive');
-                selectedFile = null;
-                return;
-            }
-
-            // Update UI for ZIP
-            fileName.textContent = file.name;
-            fileSize.textContent = `${formatFileSize(file.size)} • ${extractedCsvFiles.length} CSV file(s)`;
-
-        } catch (error) {
-            dropZone.style.opacity = '1';
-            showError('Failed to read ZIP file.');
-            selectedFile = null;
-            return;
-        }
-    } else {
-        // Regular CSV
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-    }
-
-    // Update UI
-    filePreview.classList.add('active');
-    uploadBtn.disabled = false;
-
-    // Hide dropzone hint slightly to indicate selection? (Optional, kept visible for easy swap)
-}
-
-/**
- * Clear the selected file
- */
-function clearFile() {
-    selectedFile = null;
-    extractedCsvFiles = [];
-    fileInput.value = '';
-    filePreview.classList.remove('active');
-    uploadBtn.disabled = true;
-    if (uploadingCard) uploadingCard.style.display = 'none';
-}
-
-/**
- * Show error message (Toast)
- */
 function showError(message) {
     const toast = document.createElement('div');
     toast.className = 'toast-error';
     toast.textContent = message;
     document.body.appendChild(toast);
-
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
@@ -173,208 +81,354 @@ function showError(message) {
     }, 3000);
 }
 
-/**
- * UI: Show uploading progress
- */
-function showUploadingCard() {
-    if (uploadingCard) uploadingCard.style.display = 'block';
-    if (progressPercent) progressPercent.textContent = '0%';
-    if (progressFill) progressFill.style.width = '0%';
+// ========================================
+// File Handling
+// ========================================
 
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = 'Processing...';
+async function extractCsvFromZip(zipFile) {
+    const zip = new JSZip();
+    const contents = await zip.loadAsync(zipFile);
+    const csvFiles = [];
+    for (const [filename, file] of Object.entries(contents.files)) {
+        if (!file.dir && filename.toLowerCase().endsWith('.csv')) {
+            const content = await file.async('blob');
+            csvFiles.push({ name: filename, size: content.size, content: content });
+        }
+    }
+    return csvFiles;
 }
 
-/**
- * UI: Hide uploading progress
- */
-function hideUploadingCard() {
-    if (uploadingCard) uploadingCard.style.display = 'none';
+function handleFileSelect(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) { showError('File size must be less than 25MB'); return; }
+    if (!isCsvFile(file) && !isZipFile(file)) { showError('Invalid file type'); return; }
+
+    selectedFile = file;
+    extractedCsvFiles = [];
+
+    // UI Update
+    fileName.textContent = file.name;
+    fileSize.textContent = formatFileSize(file.size);
+    filePreview.classList.add('active');
     uploadBtn.disabled = false;
-    uploadBtn.textContent = 'Upload & Analyze';
+
+    // Check ZIP immediately handled in upload start for simplicity or pre-check here?
+    // We'll process unzip in uploadFile step to show progress.
 }
 
-/**
- * Update progress bar
- */
-function updateProgress(percent) {
-    if (progressPercent) progressPercent.textContent = `Analyzing... ${Math.round(percent)}%`;
-    if (progressFill) progressFill.style.width = `${percent}%`;
+function clearFile() {
+    selectedFile = null;
+    extractedCsvFiles = [];
+    fileInput.value = '';
+    filePreview.classList.remove('active');
+    uploadBtn.disabled = true;
 }
 
-/**
- * Main Upload Function
- */
+// ========================================
+// Upload & Analysis Flow
+// ========================================
+
 async function uploadFile() {
     if (!selectedFile) return;
 
-    uploadCancelled = false;
-    showUploadingCard();
+    uploadingCard.style.display = 'block';
+    progressPercent.textContent = '0%';
+    progressFill.style.width = '0%';
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Analyzing...';
 
     try {
-        // Simulate upload/analysis progress
-        for (let i = 0; i <= 100; i += 5) {
-            updateProgress(i);
-            await new Promise(resolve => setTimeout(resolve, 50));
+        // 1. Unzip if needed
+        if (isZipFile(selectedFile)) {
+            progressPercent.textContent = 'Extracting ZIP...';
+            extractedCsvFiles = await extractCsvFromZip(selectedFile);
+            if (extractedCsvFiles.length === 0) throw new Error('No CSV files in ZIP');
+        } else {
+            extractedCsvFiles = [{ name: selectedFile.name, size: selectedFile.size, content: selectedFile }];
         }
 
-        // Logic (Data Parsing)
-        try {
-            let globalAggregates = {};
-            let globalAgeCols = [];
-            let stateCol = '';
+        progressFill.style.width = '30%';
 
-            const processFileStream = (fileBlock) => new Promise((resolve, reject) => {
-                Papa.parse(fileBlock, {
-                    header: true,
-                    skipEmptyLines: true,
-                    chunk: function (results) {
-                        const rows = results.data;
-                        if (!rows || rows.length === 0) return;
+        // 2. Analyze Headers of first file
+        await analyzeHeaders(extractedCsvFiles);
 
-                        if (!stateCol) {
-                            const keys = results.meta.fields || Object.keys(rows[0]);
-                            stateCol = keys.find(k => k.toLowerCase() === 'state') ||
-                                keys.find(k => k.toLowerCase().includes('state')) ||
-                                keys[0];
+        progressFill.style.width = '100%';
+        setTimeout(() => {
+            uploadingCard.style.display = 'none';
+            uploadBtn.textContent = 'Upload & Analyze';
 
-                            globalAgeCols = keys.filter(k => k !== stateCol && (
-                                k.toLowerCase().startsWith('age') ||
-                                k.toLowerCase().includes('yrs') ||
-                                k.toLowerCase().includes('years')
-                            ));
-                        }
-
-                        rows.forEach(row => {
-                            const state = row[stateCol] || 'Unknown';
-                            if (!globalAggregates[state]) {
-                                globalAggregates[state] = { state: state, total: 0, breakdown: {} };
-                                globalAgeCols.forEach(col => globalAggregates[state].breakdown[col] = 0);
-                            }
-                            globalAgeCols.forEach(col => {
-                                const val = parseFloat(String(row[col]).replace(/,/g, '')) || 0;
-                                globalAggregates[state].total += val;
-                                globalAggregates[state].breakdown[col] += val;
-                            });
-                        });
-                    },
-                    complete: function () { resolve(); },
-                    error: function (err) { reject(err); }
-                });
-            });
-
-            // Determine files to process
-            let filesToProcess = [];
-            if (extractedCsvFiles && extractedCsvFiles.length > 0) {
-                filesToProcess = extractedCsvFiles.map(f => f.content);
-            } else if (selectedFile) {
-                filesToProcess = [selectedFile];
-            }
-
-            for (const file of filesToProcess) {
-                await processFileStream(file);
-            }
-
-            const processedData = Object.values(globalAggregates);
-
-            if (processedData.length > 0) {
-                processedData.sort((a, b) => b.total - a.total);
-
-                const storagePacket = {
-                    metadata: { ageCols: globalAgeCols, timestamp: Date.now() },
-                    data: processedData
-                };
-
-                await storeDataInDB(storagePacket);
-
-                // Success Redirect
-                if (successModal) successModal.classList.add('active');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-
-            } else {
-                showError('No valid data found in the selected file(s).');
-                hideUploadingCard();
-            }
-
-        } catch (err) {
-            console.error('Processing error:', err);
-            showError('Error processing file data.');
-            hideUploadingCard();
-        }
+            showSchemaValidationUI();
+        }, 500);
 
     } catch (error) {
-        hideUploadingCard();
-        showError('Upload failed. Please try again.');
+        console.error(error);
+        uploadingCard.style.display = 'none';
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload & Analyze';
+        showError('Analysis failed: ' + error.message);
+    }
+}
+
+function analyzeHeaders(files) {
+    return new Promise((resolve, reject) => {
+        if (files.length === 0) return reject(new Error('No files'));
+
+        const firstFile = files[0].content;
+
+        Papa.parse(firstFile, {
+            header: true,
+            preview: 5,
+            skipEmptyLines: true,
+            complete: function (results) {
+                if (results.meta && results.meta.fields) {
+                    analysisState.files = files;
+                    analysisState.headers = results.meta.fields;
+                    analysisState.previewRows = results.data;
+                    resolve();
+                } else {
+                    reject(new Error('No headers found'));
+                }
+            },
+            error: function (err) { reject(err); }
+        });
+    });
+}
+
+// ========================================
+// Schema Validation UI logic
+// ========================================
+
+function showSchemaValidationUI() {
+    mainUploadCard.parentElement.style.display = 'none'; // Hide main container wrapper if any
+    if (mainUploadCard) mainUploadCard.style.display = 'none';
+
+    schemaContainer.style.display = 'block';
+
+    // 1. Render Accordion
+    detectedFilesContainer.innerHTML = '';
+    analysisState.files.forEach((f, idx) => {
+        const isOpen = idx === 0;
+
+        const item = document.createElement('div');
+        item.className = `file-accordion-item ${isOpen ? 'active' : ''}`;
+
+        const header = document.createElement('div');
+        header.className = 'file-accordion-header';
+        header.innerHTML = `
+            <div style="display:flex; align-items:center;">
+                <span style="font-weight:600; margin-right:10px; font-size:0.9rem;">${f.name}</span>
+                <span style="color:#64748b; font-size:0.8rem;">[${formatFileSize(f.size)}]</span>
+            </div>
+            <div class="accordion-icon">▼</div>
+        `;
+
+        const body = document.createElement('div');
+        body.className = 'file-accordion-body';
+
+        if (idx === 0) {
+            body.innerHTML = renderPreviewTable(analysisState.headers, analysisState.previewRows);
+            body.style.display = 'block';
+        } else {
+            body.innerHTML = '<div style="padding:1rem; text-align:center; color:#64748b; font-size:0.85rem;">Schema matched with primary file</div>';
+        }
+
+        // Toggle Event
+        header.addEventListener('click', () => {
+            const isActive = item.classList.contains('active');
+            document.querySelectorAll('.file-accordion-item').forEach(el => {
+                el.classList.remove('active');
+                el.querySelector('.file-accordion-body').style.display = 'none';
+            });
+            if (!isActive) {
+                item.classList.add('active');
+                body.style.display = 'block';
+            }
+        });
+
+        item.appendChild(header);
+        item.appendChild(body);
+        detectedFilesContainer.appendChild(item);
+    });
+
+    // 2. Populate Dropdowns
+    const headers = analysisState.headers;
+    const populate = (select, matchFn) => {
+        select.innerHTML = '<option value="">-- Select --</option>';
+        let matched = false;
+        headers.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h;
+            opt.textContent = h;
+            if (!matched && matchFn(h.toLowerCase())) {
+                opt.selected = true;
+                matched = true;
+            }
+            select.appendChild(opt);
+        });
+    };
+
+    populate(mapDate, h => h.includes('date') || h.includes('time'));
+    populate(mapState, h => h === 'state' || h.includes('state'));
+    populate(mapDistrict, h => h === 'district' || h.includes('district'));
+    populate(mapPincode, h => h.includes('pin') || h.includes('zip') || h.includes('code'));
+
+    // 3. Auto-detect Age
+    ageColsTags.innerHTML = '';
+    const ageCols = headers.filter(h =>
+        h.toLowerCase().startsWith('age') ||
+        h.toLowerCase().includes('years') ||
+        h.toLowerCase().includes('yrs') ||
+        h.toLowerCase().includes('demo_age')
+    );
+
+    if (ageCols.length > 0) {
+        ageCols.forEach(col => {
+            const tag = document.createElement('div');
+            tag.className = 'age-tag';
+            tag.textContent = col;
+            tag.style.cssText = "background:#eff6ff; color:#3b5bdb; padding:4px 8px; border-radius:4px; font-size:0.75rem;";
+            ageColsTags.appendChild(tag);
+        });
+    }
+
+    checkFormValidity();
+    [mapDate, mapState, mapDistrict].forEach(el => el.addEventListener('change', checkFormValidity));
+}
+
+function renderPreviewTable(headers, rows) {
+    let html = '<table class="preview-table"><thead><tr>';
+    headers.forEach(h => html += `<th>${h}</th>`);
+    html += '</tr></thead><tbody>';
+    rows.forEach(row => {
+        html += '<tr>';
+        headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+function checkFormValidity() {
+    const isValid = mapDate.value && mapState.value && mapDistrict.value;
+    proceedToDashboardBtn.disabled = !isValid;
+}
+
+// ========================================
+// Proceed & Process
+// ========================================
+
+async function processDataWithSchema() {
+    proceedToDashboardBtn.textContent = 'Processing...';
+    proceedToDashboardBtn.disabled = true;
+
+    const mappings = {
+        state: mapState.value,
+        date: mapDate.value,
+        district: mapDistrict.value,
+        ageCols: analysisState.headers.filter(h =>
+            h.toLowerCase().startsWith('age') ||
+            h.toLowerCase().includes('years') ||
+            h.toLowerCase().includes('yrs') ||
+            h.toLowerCase().includes('demo_age')
+        )
+    };
+
+    try {
+        let globalAggregates = {};
+
+        const processStream = (fileContent) => new Promise((resolve, reject) => {
+            Papa.parse(fileContent, {
+                header: true,
+                skipEmptyLines: true,
+                chunk: function (results) {
+                    const rows = results.data;
+                    rows.forEach(row => {
+                        const stateVal = row[mappings.state] || 'Unknown';
+                        if (!globalAggregates[stateVal]) {
+                            globalAggregates[stateVal] = {
+                                state: stateVal,
+                                total: 0,
+                                breakdown: {}
+                            };
+                            mappings.ageCols.forEach(ac => globalAggregates[stateVal].breakdown[ac] = 0);
+                        }
+                        mappings.ageCols.forEach(ac => {
+                            const raw = String(row[ac] || '0').replace(/,/g, '');
+                            const val = parseFloat(raw) || 0;
+                            globalAggregates[stateVal].total += val;
+                            globalAggregates[stateVal].breakdown[ac] += val;
+                        });
+                    });
+                },
+                complete: resolve,
+                error: reject
+            });
+        });
+
+        for (const fileObj of analysisState.files) {
+            await processStream(fileObj.content);
+        }
+
+        const finalData = Object.values(globalAggregates).sort((a, b) => b.total - a.total);
+
+        await storeDataInDB({
+            metadata: { ageCols: mappings.ageCols, timestamp: Date.now() },
+            data: finalData
+        });
+
+        window.location.href = 'dashboard.html';
+
+    } catch (e) {
+        console.error(e);
+        showError('Processing failed');
+        proceedToDashboardBtn.disabled = false;
+        proceedToDashboardBtn.textContent = 'Proceed';
     }
 }
 
 // ========================================
-// IndexedDB Storage 
+// DB
 // ========================================
-const DB_NAME = 'UIDAI_Analytics_DB';
-const DB_VERSION = 1;
-const STORE_NAME = 'enrolment_data';
-
-function initDB() {
+function initDB() { /* ... (Same as before) ... */
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = (event) => reject('Database error: ' + event.target.error);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            }
+        const request = indexedDB.open('UIDAI_Analytics_DB', 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('enrolment_data')) db.createObjectStore('enrolment_data', { keyPath: 'id' });
         };
-        request.onsuccess = (event) => resolve(event.target.result);
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e);
     });
 }
-
 async function storeDataInDB(data) {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const putRequest = store.put({ id: 'current_dataset', data: data });
-        putRequest.onsuccess = () => { db.close(); resolve(); };
-        putRequest.onerror = (e) => { db.close(); reject(e.target.error); };
+        const tx = db.transaction(['enrolment_data'], 'readwrite');
+        tx.objectStore('enrolment_data').put({ id: 'current_dataset', data: data });
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(); };
     });
 }
 
 // ========================================
-// Event Listeners
+// Events
 // ========================================
-
-dropZone.addEventListener('click', (e) => {
-    if (e.target !== browseBtn) fileInput.click();
-});
-browseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fileInput.click();
-});
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleFileSelect(file);
-});
-
-// Drag & Drop
-dropZone.addEventListener('dragenter', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('click', (e) => { if (e.target !== browseBtn) fileInput.click(); });
+browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFileSelect(e.target.files[0]); });
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) handleFileSelect(files[0]);
-});
-
-if (removeBtn) {
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearFile();
-    });
-}
-
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]); });
+if (removeBtn) removeBtn.addEventListener('click', (e) => { e.stopPropagation(); clearFile(); });
 uploadBtn.addEventListener('click', uploadFile);
 
+if (cancelSchemaBtn) cancelSchemaBtn.addEventListener('click', () => {
+    schemaContainer.style.display = 'none';
+    if (mainUploadCard) {
+        mainUploadCard.style.display = 'flex'; // Reset to flex as per CSS
+        if (mainUploadCard.parentElement) mainUploadCard.parentElement.style.display = 'flex'; // Reset wrapper
+    }
+    clearFile();
+});
+
+if (proceedToDashboardBtn) proceedToDashboardBtn.addEventListener('click', processDataWithSchema);
