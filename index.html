@@ -67,6 +67,104 @@
         </div>
     </div>
 
+    <!-- Schema Validation UI (New Image 2 UI) -->
+    <div id="schemaContainer" class="page-background"
+        style="display:none; align-items: flex-start; justify-content: flex-start; padding: 0; height: 100vh; width: 100vw; box-sizing: border-box; overflow: hidden; background: #fff;">
+        <div class="upload-card schema-card-wide"
+            style="width: 100%; max-width: none; padding: 2rem; text-align: left; border-radius: 0; height: 100vh; max-height: 100vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: none;">
+            <div class="card-header" style="text-align: left; margin-bottom: 1.5rem;">
+                <h1>Schema Validation</h1>
+                <p style="margin:0; text-align:left; max-width:none; color: var(--c-text-sub);">Review detected columns
+                    and confirm field mappings before proceeding.</p>
+            </div>
+
+            <div class="schema-layout"
+                style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; width: 100%; flex: 1; overflow: hidden; min-height: 0;">
+                <!-- Left: Accordion File List -->
+                <div class="detected-files-section"
+                    style="background: #fff; border: 1px solid var(--c-border-dashed); border-radius: 12px; padding: 1.5rem; overflow-y: auto; height: 100%; display: flex; flex-direction: column;">
+                    <h3 class="section-title" style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Detected
+                        Files & Columns</h3>
+                    <div id="detectedFilesContainer" class="accordion-container">
+                        <!-- Dynamic Content -->
+                    </div>
+                </div>
+
+                <!-- Right: Mapping Sidebar -->
+                <div class="mapping-sidebar"
+                    style="background: #fff; border: 1px solid var(--c-border-dashed); border-radius: 12px; padding: 1.5rem; height: 100%; overflow-y: auto;">
+                    <h3 class="section-title" style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">Confirm
+                        Column Mapping</h3>
+                    <p class="subtitle-small" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1.5rem;">Map
+                        detected columns to required analytical fields.</p>
+
+                    <div class="field-group" style="margin-bottom: 1.25rem;">
+                        <div class="label-row"
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; align-items: center;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">Date</label>
+                            <span class="badge badge-required"
+                                style="background: #fecaca; color: #b91c1c; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">REQUIRED</span>
+                        </div>
+                        <select id="mapDate" class="input-select"
+                            style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff;"></select>
+                    </div>
+
+                    <div class="field-group" style="margin-bottom: 1.25rem;">
+                        <div class="label-row"
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; align-items: center;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">State</label>
+                            <span class="badge badge-required"
+                                style="background: #fecaca; color: #b91c1c; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">REQUIRED</span>
+                        </div>
+                        <select id="mapState" class="input-select"
+                            style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff;"></select>
+                    </div>
+
+                    <div class="field-group" style="margin-bottom: 1.25rem;">
+                        <div class="label-row"
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; align-items: center;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">District</label>
+                            <span class="badge badge-required"
+                                style="background: #fecaca; color: #b91c1c; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">REQUIRED</span>
+                        </div>
+                        <select id="mapDistrict" class="input-select"
+                            style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff;"></select>
+                    </div>
+
+                    <div class="field-group" style="margin-bottom: 1.25rem;">
+                        <div class="label-row"
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; align-items: center;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">Pincode</label>
+                            <span class="badge badge-optional"
+                                style="background: #f1f5f9; color: #64748b; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">OPTIONAL</span>
+                        </div>
+                        <select id="mapPincode" class="input-select"
+                            style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff;"></select>
+                    </div>
+
+                    <div class="field-group" style="margin-bottom: 2rem;">
+                        <div class="label-row"
+                            style="display: flex; gap: 0.5rem; margin-bottom: 0.4rem; align-items: center;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">Age Group
+                                Columns</label>
+                            <span class="badge badge-auto"
+                                style="background: #dbeafe; color: #2563eb; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">AUTO-DETECTED</span>
+                        </div>
+                        <div id="ageColsTags" class="tags-container"
+                            style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;"></div>
+                    </div>
+
+                    <div class="actions-row" style="display: flex; gap: 1rem;">
+                        <button id="cancelSchemaBtn" class="btn-browse"
+                            style="flex: 1; padding: 0.75rem;">Cancel</button>
+                        <button id="proceedToDashboardBtn" class="btn-primary" disabled
+                            style="flex: 1; margin:0; padding: 0.75rem;">Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden Success Modal Triggers (kept for logic compatibility) -->
     <div class="modal-overlay" id="successModal">
         <div class="modal">
