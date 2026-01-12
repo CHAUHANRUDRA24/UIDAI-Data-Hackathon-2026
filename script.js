@@ -25,7 +25,7 @@ const cancelUploadBtn = document.getElementById('cancelUploadBtn');
 const mainUploadCard = document.querySelector('.upload-card:not(.uploading-card)');
 
 // Configuration
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB in bytes
 const ALLOWED_TYPES = {
     csv: ['text/csv', 'application/vnd.ms-excel'],
     zip: ['application/zip', 'application/x-zip-compressed', 'application/x-zip']
@@ -95,7 +95,7 @@ function validateFile(file) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-        return { isValid: false, error: 'File size must be less than 25MB' };
+        return { isValid: false, error: 'File size must be less than 40MB' };
     }
 
     return { isValid: true, error: null };
@@ -327,8 +327,113 @@ async function uploadFile() {
         // Hide uploading card
         hideUploadingCard();
 
-        // Show success modal
-        successModal.classList.add('active');
+        // Stream Parse and Aggregate Data
+        try {
+            let globalAggregates = {}; // { StateName: { state, total, breakdown: {} } }
+            let globalAgeCols = [];
+            let stateCol = '';
+
+            // Helper to process a single file stream
+            const processFileStream = (fileBlock) => new Promise((resolve, reject) => {
+                let isFirstChunk = true;
+
+                Papa.parse(fileBlock, {
+                    header: true,
+                    skipEmptyLines: true,
+                    chunk: function (results) {
+                        const rows = results.data;
+                        if (!rows || rows.length === 0) return;
+
+                        // Identify columns on the very first chunk of the first file
+                        if (!stateCol) {
+                            const keys = results.meta.fields || Object.keys(rows[0]);
+                            stateCol = keys.find(k => k.toLowerCase() === 'state') ||
+                                keys.find(k => k.toLowerCase().includes('state')) ||
+                                keys[0];
+
+                            globalAgeCols = keys.filter(k => k !== stateCol && (
+                                k.toLowerCase().startsWith('age') ||
+                                k.toLowerCase().includes('yrs') ||
+                                k.toLowerCase().includes('years')
+                            ));
+                            console.log('Identified columns:', { stateCol, ageCols: globalAgeCols });
+                        }
+
+                        // Process Rows
+                        rows.forEach(row => {
+                            const state = row[stateCol] || 'Unknown';
+
+                            if (!globalAggregates[state]) {
+                                globalAggregates[state] = {
+                                    state: state,
+                                    total: 0,
+                                    breakdown: {}
+                                };
+                                globalAgeCols.forEach(col => globalAggregates[state].breakdown[col] = 0);
+                            }
+
+                            globalAgeCols.forEach(col => {
+                                const valStr = String(row[col]).replace(/,/g, '');
+                                const val = parseFloat(valStr) || 0;
+                                globalAggregates[state].total += val;
+                                globalAggregates[state].breakdown[col] += val;
+                            });
+                        });
+                    },
+                    complete: function () {
+                        resolve();
+                    },
+                    error: function (err) {
+                        reject(err);
+                    }
+                });
+            });
+
+            // List of files to process
+            let filesToProcess = [];
+            if (extractedCsvFiles && extractedCsvFiles.length > 0) {
+                console.log(`Aggregating ${extractedCsvFiles.length} CSV files from ZIP`);
+                filesToProcess = extractedCsvFiles.map(f => f.content);
+            } else if (selectedFile) {
+                filesToProcess = [selectedFile];
+            }
+
+            // Process sequentially to be safe with shared state
+            for (const file of filesToProcess) {
+                await processFileStream(file);
+            }
+
+            const processedData = Object.values(globalAggregates);
+
+            if (processedData.length > 0) {
+                // Sort by Total Enrolment Descending
+                processedData.sort((a, b) => b.total - a.total);
+
+                const storagePacket = {
+                    metadata: { ageCols: globalAgeCols, timestamp: Date.now() },
+                    data: processedData
+                };
+
+                try {
+                    // Store the aggregated data in IndexedDB
+                    await storeDataInDB(storagePacket);
+                    console.log('Aggregated data stored:', processedData.length, 'states');
+
+                    // Show success modal
+                    successModal.classList.add('active');
+                } catch (storageError) {
+                    console.error('Storage error:', storageError);
+                    showError('Failed to store data.');
+                    return;
+                }
+            } else {
+                showError('No valid data found in the selected file(s).');
+            }
+
+        } catch (err) {
+            console.error('Processing error:', err);
+            showError('Error processing file data.');
+        }
 
         // Reset the form
         clearFile();
@@ -429,8 +534,11 @@ uploadBtn.addEventListener('click', uploadFile);
 // Cancel upload button
 cancelUploadBtn.addEventListener('click', cancelUpload);
 
-// Modal close button
-modalCloseBtn.addEventListener('click', closeModal);
+// Modal close button - Redirect to dashboard
+modalCloseBtn.addEventListener('click', () => {
+    closeModal();
+    window.location.href = 'dashboard.html'; // Redirect to dashboard
+});
 
 // Close modal on overlay click
 successModal.addEventListener('click', (e) => {
@@ -446,6 +554,99 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Prevent default drag behavior on window
-window.addEventListener('dragover', (e) => e.preventDefault());
-window.addEventListener('drop', (e) => e.preventDefault());
+// Demo Button Logic
+const demoBtn = document.getElementById('demoBtn');
+if (demoBtn) {
+    demoBtn.addEventListener('click', async () => {
+        try {
+            uploadingCard.style.display = 'block'; // Show loading state
+            mainUploadCard.style.display = 'none';
+            uploadingFileName.textContent = 'sample_enrolment.csv';
+            uploadingFileMeta.textContent = 'Demo Data';
+
+            const response = await fetch('sample_enrolment.csv');
+            if (!response.ok) throw new Error('Failed to load demo data');
+            const text = await response.text();
+
+            // Artificial delay to show "loading"
+            updateProgress(30);
+            await new Promise(r => setTimeout(r, 500));
+            updateProgress(70);
+            await new Promise(r => setTimeout(r, 500));
+            updateProgress(100);
+
+            Papa.parse(text, {
+                header: true,
+                skipEmptyLines: true,
+                complete: async function (results) {
+                    try {
+                        await storeDataInDB(results.data);
+                        successModal.classList.add('active');
+                        hideUploadingCard();
+                    } catch (e) {
+                        showError('Failed to store demo data in DB');
+                        hideUploadingCard();
+                    }
+                }
+            });
+
+        } catch (err) {
+            console.error(err);
+            hideUploadingCard();
+            showError('Could not load demo data.');
+        }
+    });
+}
+
+// ========================================
+// IndexedDB Storage Helpers (for larger datasets)
+// ========================================
+const DB_NAME = 'UIDAI_Analytics_DB';
+const DB_VERSION = 1;
+const STORE_NAME = 'enrolment_data';
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = (event) => reject('Database error: ' + event.target.error);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = (event) => resolve(event.target.result);
+    });
+}
+
+async function storeDataInDB(data) {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+
+        // We actully only need one huge record for this simple app, 
+        // or we could store each row. Storing one blob is easier for migration from sessionStorage.
+        const putRequest = store.put({ id: 'current_dataset', data: data });
+
+        putRequest.onsuccess = () => {
+            db.close();
+            resolve();
+        };
+        putRequest.onerror = (e) => {
+            db.close();
+            if (e.target.error.name === 'QuotaExceededError') {
+                reject(new Error('Storage limit exceeded. Please clear browser space or use a smaller file.'));
+            } else {
+                reject(e.target.error);
+            }
+        };
+    });
+}
+
+// Update existing logic to use IndexedDB
+// 1. In uploadFile function (lines ~385)
+

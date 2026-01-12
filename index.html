@@ -34,7 +34,7 @@
                         </svg>
                     </div>
                     <p class="drop-text">Drag & drop your CSV or ZIP here or click to browse</p>
-                    <p class="file-limit">CSV or ZIP (containing CSV) up to 25MB</p>
+                    <p class="file-limit">CSV or ZIP (containing CSV) up to 40MB</p>
                     <button type="button" class="browse-btn" id="browseBtn">Browse Files</button>
                 </div>
                 <input type="file" id="fileInput" accept=".csv,.zip" hidden>
@@ -154,6 +154,14 @@
             <!-- Cancel Link -->
             <button type="button" class="cancel-link" id="cancelUploadBtn">Cancel upload</button>
 
+            <!-- Demo Mode (Added for convenience) -->
+            <div style="margin-top: 1rem; text-align: center;">
+                <button type="button" id="demoBtn"
+                    style="background: none; border: none; color: #64748b; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    Try with Demo Data
+                </button>
+            </div>
+
             <!-- Encryption Notice -->
             <div class="encryption-notice">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -183,6 +191,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="script.js"></script>
 </body>
 
