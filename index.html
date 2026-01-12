@@ -14,73 +14,188 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="upload-card">
-            <!-- Header -->
-            <div class="card-header">
-                <h1 class="title">Upload Report CSV</h1>
-                <p class="subtitle">Upload a UIDAI analytics report to validate structure and generate insights</p>
-            </div>
-
-            <!-- Drop Zone -->
-            <div class="drop-zone" id="dropZone">
-                <div class="drop-zone-content">
-                    <div class="upload-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                    </div>
-                    <p class="drop-text">Drag & drop your CSV or ZIP here or click to browse</p>
-                    <p class="file-limit">CSV or ZIP (containing CSV) up to 25MB</p>
-                    <button type="button" class="browse-btn" id="browseBtn">Browse Files</button>
+    <div class="container" id="mainContainer">
+        <!-- VIEW 1: UPLOAD SECTION -->
+        <div id="uploadSection" class="view-section active">
+            <div class="upload-card">
+                <div class="card-header">
+                    <h1 class="title">Upload Report CSV</h1>
+                    <p class="subtitle">Upload a UIDAI analytics report to validate structure and generate insights</p>
                 </div>
-                <input type="file" id="fileInput" accept=".csv,.zip" hidden>
-            </div>
 
-            <!-- Selected File Preview -->
-            <div class="file-preview" id="filePreview">
-                <div class="file-info">
-                    <div class="file-icon">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <div class="upload-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <p class="drop-text">Drag & drop your CSV or ZIP here or click to browse</p>
+                        <p class="file-limit">CSV or ZIP (containing CSV) up to 40MB</p>
+                        <button type="button" class="browse-btn" id="browseBtn">Browse Files</button>
+                    </div>
+                    <input type="file" id="fileInput" accept=".csv,.zip" hidden>
+                </div>
+
+                <div class="file-preview" id="filePreview">
+                    <div class="file-info">
+                        <div class="file-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                                <polyline points="10 9 9 9 8 9" />
+                            </svg>
+                        </div>
+                        <div class="file-details">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
+                    </div>
+                    <button type="button" class="remove-btn" id="removeBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+
+                <button type="button" class="upload-btn" id="uploadBtn" disabled>
+                    <span class="btn-text">Upload & Analyze</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+
+                <div class="security-notice">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <span>Files are processed securely and not shared without permission</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: DASHBOARD SECTION (Hidden by default) -->
+        <div id="dashboardSection" class="view-section" style="display: none;">
+            <div class="dashboard-header-bar">
+                <div class="header-left">
+                    <h1>Biometric Analytics Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button id="backBtn" class="back-nav-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="16" y1="13" x2="8" y2="13" />
-                            <line x1="16" y1="17" x2="8" y2="17" />
-                            <polyline points="10 9 9 9 8 9" />
+                            <path d="M15 18l-6-6 6-6" />
                         </svg>
-                    </div>
-                    <div class="file-details">
-                        <span class="file-name" id="fileName"></span>
-                        <span class="file-size" id="fileSize"></span>
+                        Upload New File
+                    </button>
+                    <div class="uidai-badge">
+                        <span class="status-dot"></span>
+                        Status: Active Analysis
                     </div>
                 </div>
-                <button type="button" class="remove-btn" id="removeBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
             </div>
 
-            <!-- Upload Button -->
-            <button type="button" class="upload-btn" id="uploadBtn" disabled>
-                <span class="btn-text">Upload & Analyze</span>
-                <div class="loader" id="loader"></div>
-            </button>
+            <div class="dashboard-content">
+                <!-- Key Metrics Row -->
+                <div class="metrics-row">
+                    <div class="metric-card">
+                        <div class="metric-icon blue">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Minors (5-17) Updates</p>
+                            <h3 class="metric-value" id="stat5to17">0</h3>
+                        </div>
+                    </div>
 
-            <!-- Security Notice -->
-            <div class="security-notice">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                <span>Files are processed securely and not shared without permission</span>
+                    <div class="metric-card">
+                        <div class="metric-icon orange">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Adults (17+) Updates</p>
+                            <h3 class="metric-value" id="stat17plus">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon green">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="20" x2="12" y2="10" />
+                                <line x1="18" y1="20" x2="18" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="16" />
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Volume Gap</p>
+                            <h3 class="metric-value" id="statDiff">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Area -->
+                <div class="charts-area">
+                    <div class="chart-panel">
+                        <div class="panel-header">
+                            <h3>Volume Comparison by Age Group</h3>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="panel-header">
+                            <h3>Regional Update Trends</h3>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Intelligence Section -->
+                <div class="intelligence-section">
+                    <div class="insight-card full-width">
+                        <div class="card-head">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            <h3>AI Analysis & Recommendations</h3>
+                        </div>
+                        <ul class="smart-insights" id="insightsList">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -94,14 +209,15 @@
                     <polyline points="20 6 9 17 4 12" />
                 </svg>
             </div>
-            <h2 class="modal-title">Upload Successful!</h2>
-            <p class="modal-text">Your file has been uploaded and CSV data extracted successfully. Analysis is in
-                progress.</p>
-            <button type="button" class="modal-btn" id="modalCloseBtn">Continue</button>
+            <h2 class="modal-title">Analysis Complete!</h2>
+            <p class="modal-text">Your biometric data has been analyzed. View the charts and insights below.</p>
+            <button type="button" class="modal-btn" id="modalCloseBtn">View Results</button>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 
