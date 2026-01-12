@@ -422,16 +422,94 @@ function setupActionButtons(data, ageCols) {
     const exportBtn = document.getElementById('exportBtn');
     const shareBtn = document.getElementById('shareBtn');
 
-    // Export Logic (PDF)
+    // Export PDF Modal Elements
+    const exportModal = document.getElementById('exportModal');
+    const closeExportModal = document.getElementById('closeExportModal');
+    const cancelExportBtn = document.getElementById('cancelExportBtn');
+    const confirmExportBtn = document.getElementById('confirmExportBtn');
+    const pdfPasswordInput = document.getElementById('pdfPassword');
+    const pdfPasswordConfirm = document.getElementById('pdfPasswordConfirm');
+    const exportError = document.getElementById('exportError');
+
+    // Helper to show export modal
+    const showExportModal = () => {
+        if (exportModal) {
+            exportModal.style.display = 'flex';
+            void exportModal.offsetWidth;
+            exportModal.classList.add('active');
+            if (pdfPasswordInput) pdfPasswordInput.value = '';
+            if (pdfPasswordConfirm) pdfPasswordConfirm.value = '';
+            if (exportError) exportError.style.display = 'none';
+            if (pdfPasswordInput) pdfPasswordInput.focus();
+        }
+    };
+
+    // Helper to hide export modal
+    const hideExportModal = () => {
+        if (exportModal) {
+            exportModal.classList.remove('active');
+            setTimeout(() => {
+                exportModal.style.display = 'none';
+            }, 300);
+        }
+    };
+
+    // Export Button Click - Show Modal
     if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
+        exportBtn.addEventListener('click', showExportModal);
+    }
+
+    // Close Modal Buttons
+    if (closeExportModal) closeExportModal.addEventListener('click', hideExportModal);
+    if (cancelExportBtn) cancelExportBtn.addEventListener('click', hideExportModal);
+    if (exportModal) {
+        exportModal.addEventListener('click', (e) => {
+            if (e.target === exportModal) hideExportModal();
+        });
+    }
+
+    // Confirm Export Button
+    if (confirmExportBtn) {
+        confirmExportBtn.addEventListener('click', async () => {
+            const password = pdfPasswordInput ? pdfPasswordInput.value.trim() : '';
+            const confirmPassword = pdfPasswordConfirm ? pdfPasswordConfirm.value.trim() : '';
+
+            // Validation
+            if (!password) {
+                if (exportError) {
+                    exportError.textContent = 'Please enter a password';
+                    exportError.style.display = 'block';
+                }
+                return;
+            }
+
+            if (password.length < 4) {
+                if (exportError) {
+                    exportError.textContent = 'Password must be at least 4 characters';
+                    exportError.style.display = 'block';
+                }
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                if (exportError) {
+                    exportError.textContent = 'Passwords do not match';
+                    exportError.style.display = 'block';
+                }
+                return;
+            }
+
+            // Hide error
+            if (exportError) exportError.style.display = 'none';
+
+            // Update button state
+            confirmExportBtn.innerHTML = '<span class="spinner"></span> Generating...';
+            confirmExportBtn.disabled = true;
+
             const date = new Date().toISOString().split('T')[0];
             const filename = `uidai_analytics_report_${date}.pdf`;
-
-            // Get the element to print
             const element = document.getElementById('dashboardContent');
 
-            // PDF Options
             const opt = {
                 margin: [0.5, 0.5],
                 filename: filename,
@@ -440,71 +518,51 @@ function setupActionButtons(data, ageCols) {
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
             };
 
-            // Ask for Password (Required)
-            let password = prompt("Enter a password to protect this PDF (Required):");
-            
-            // If cancelled or empty, show alert and return
-            if (!password || password.trim() === '') {
-                alert('PDF password is required for security. Export cancelled.');
-                return;
-            }
+            try {
+                const pdfBuffer = await html2pdf().set(opt).from(element).output('arraybuffer');
 
-            // Temporarily hide buttons for clean print
-            exportBtn.textContent = 'Generating...';
-            exportBtn.disabled = true;
-
-            // Generate PDF logic with Encryption support
-            html2pdf().set(opt).from(element).output('arraybuffer').then(async (pdfBuffer) => {
-                try {
-                    // Ensure PDFLib is loaded
-                    if (typeof PDFLib === 'undefined') {
-                        throw new Error('PDFLib not loaded');
-                    }
-
-                    const { PDFDocument } = PDFLib;
-                    const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-                    // Encrypt with password
-                    await pdfDoc.encrypt({
-                        userPassword: password,
-                        ownerPassword: password
-                    });
-
-                    const encryptedPdf = await pdfDoc.save();
-
-                    // Download Encrypted
-                    const blob = new Blob([encryptedPdf], { type: 'application/pdf' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
-                    
-                    alert('PDF exported successfully with password protection!');
-                } catch (e) {
-                    console.error('Encryption failed', e);
-                    alert(`Encryption failed (${e.message}). Please try again.`);
+                if (typeof PDFLib === 'undefined') {
+                    throw new Error('PDFLib not loaded');
                 }
 
-                // Reset Button
-                exportBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    Export PDF
-                `;
-                exportBtn.disabled = false;
-            }).catch(err => {
-                console.error(err);
-                exportBtn.textContent = 'Export Failed';
-                setTimeout(() => {
-                    exportBtn.innerHTML = 'Export PDF';
-                    exportBtn.disabled = false;
-                }, 2000);
-            });
+                const { PDFDocument } = PDFLib;
+                const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+                await pdfDoc.encrypt({
+                    userPassword: password,
+                    ownerPassword: password
+                });
+
+                const encryptedPdf = await pdfDoc.save();
+
+                const blob = new Blob([encryptedPdf], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+
+                // Success - hide modal
+                hideExportModal();
+
+            } catch (e) {
+                console.error('PDF Export failed', e);
+                if (exportError) {
+                    exportError.textContent = `Export failed: ${e.message}`;
+                    exportError.style.display = 'block';
+                }
+            }
+
+            // Reset button
+            confirmExportBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.5rem;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export PDF
+            `;
+            confirmExportBtn.disabled = false;
         });
     }
 

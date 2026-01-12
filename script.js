@@ -347,15 +347,58 @@ async function uploadFile() {
                         // Identify columns on the very first chunk of the first file
                         if (!stateCol) {
                             const keys = results.meta.fields || Object.keys(rows[0]);
+                            
+                            // Find state column
                             stateCol = keys.find(k => k.toLowerCase() === 'state') ||
                                 keys.find(k => k.toLowerCase().includes('state')) ||
+                                keys.find(k => k.toLowerCase().includes('district')) ||
                                 keys[0];
 
-                            globalAgeCols = keys.filter(k => k !== stateCol && (
-                                k.toLowerCase().startsWith('age') ||
-                                k.toLowerCase().includes('yrs') ||
-                                k.toLowerCase().includes('years')
-                            ));
+                            // Skip patterns - columns we don't want to aggregate
+                            const skipPatterns = ['date', 'pincode', 'pin', 'code', 'id', 'registrar', 'source', 'month', 'year', 'week'];
+                            
+                            // Include patterns - columns that contain count/numeric data
+                            const includePatterns = [
+                                'age', 'yrs', 'years', 'enrol', 'update', 'count', 'total',
+                                'bio', 'demo', 'child', 'adult', 'senior', 'biometric', 'demographic',
+                                '0_5', '5_17', '17_', '18_', '0-5', '5-17', '17-', '18-',
+                                'greater', 'plus', 'above', 'below', 'under', 'over'
+                            ];
+                            
+                            globalAgeCols = keys.filter(k => {
+                                // Skip state column
+                                if (k === stateCol) return false;
+                                
+                                const kLower = k.toLowerCase();
+                                
+                                // Skip if it matches skip patterns
+                                if (skipPatterns.some(p => kLower.includes(p))) return false;
+                                
+                                // Include if it matches include patterns
+                                if (includePatterns.some(p => kLower.includes(p))) return true;
+                                
+                                // Include if it starts with a number (like "0_5", "5_17")
+                                if (/^\d/.test(k)) return true;
+                                
+                                // Include if it's a simple numeric column name
+                                if (/^\d+[-_]?\d*$/.test(k)) return true;
+                                
+                                return false;
+                            });
+                            
+                            // If no columns detected, try to find ALL numeric-looking columns
+                            if (globalAgeCols.length === 0) {
+                                globalAgeCols = keys.filter(k => {
+                                    if (k === stateCol) return false;
+                                    const kLower = k.toLowerCase();
+                                    if (skipPatterns.some(p => kLower.includes(p))) return false;
+                                    // Check if first row has a numeric value
+                                    const sampleVal = rows[0][k];
+                                    const numVal = parseFloat(String(sampleVal).replace(/,/g, ''));
+                                    return !isNaN(numVal) && numVal > 0;
+                                });
+                            }
+                            
                             console.log('Identified columns:', { stateCol, ageCols: globalAgeCols });
                         }
 

@@ -226,7 +226,69 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-primary" id="generateLinkBtn" style="width: 100%;">Generage Secure Link</button>
+                <button class="btn-primary" id="generateLinkBtn" style="width: 100%;">Generate Secure Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export PDF Modal -->
+    <div id="exportModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>Export PDF Report</h3>
+                <button class="modal-close" id="closeExportModal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        stroke="#3b5bdb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <rect x="8" y="12" width="8" height="6" rx="1"></rect>
+                        <path d="M10 12v-1a2 2 0 1 1 4 0v1"></path>
+                    </svg>
+                </div>
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 0.9rem; text-align: center;">
+                    Your PDF will be password protected for security. Enter a password to protect your report.
+                </p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-primary);">
+                        PDF Password (Required)
+                    </label>
+                    <input type="password" id="pdfPassword" placeholder="Enter password..."
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: inherit;">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label
+                        style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-primary);">
+                        Confirm Password
+                    </label>
+                    <input type="password" id="pdfPasswordConfirm" placeholder="Confirm password..."
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: inherit;">
+                </div>
+
+                <p id="exportError" style="color: #ef4444; font-size: 0.85rem; text-align: center; display: none; margin-bottom: 1rem;"></p>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 0.75rem;">
+                <button class="btn-secondary" id="cancelExportBtn" style="flex: 1;">Cancel</button>
+                <button class="btn-primary" id="confirmExportBtn" style="flex: 1;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.5rem;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export PDF
+                </button>
             </div>
         </div>
     </div>
