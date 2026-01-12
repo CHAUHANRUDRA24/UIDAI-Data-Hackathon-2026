@@ -8,184 +8,281 @@
     <title>Dashboard | UIDAI Analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-title">
-                <h1>Enrolment Analytics</h1>
-                <p>Regional distribution and age-wise breakdown</p>
-            </div>
-            <div class="header-actions" style="display: flex; gap: 0.75rem;">
-                <button id="shareBtn" class="action-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="18" cy="5" r="3"></circle>
-                        <circle cx="6" cy="12" r="3"></circle>
-                        <circle cx="18" cy="19" r="3"></circle>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    Share
-                </button>
-                <button id="exportBtn" class="action-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    Export PDF
-                </button>
-                <a href="index.html" class="back-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                    </svg>
-                    Upload New
-                </a>
-            </div>
-        </header>
+    <div class="app-container">
 
-        <!-- Loading State (Hidden by default, used if JS needs time) -->
-        <div id="loadingState" class="loading-state" style="display: none;">
-            <div class="loader"></div>
-            <p style="margin-top: 1rem;">Processing analytics...</p>
-        </div>
 
         <!-- Main Content -->
-        <div id="dashboardContent">
-            <!-- Summary Stats -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <p class="stat-label">Total Enrolments</p>
-                    <p class="stat-value" id="totalEnrolments">-</p>
-                    <div class="stat-trend" id="totalStatesSubtitle">
-                        Across - states
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <p class="stat-label">Top Performing State</p>
-                    <p class="stat-value" id="topState">-</p>
-                    <div class="stat-trend trend-up" id="topStateVal">
-                        - enrolments
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <p class="stat-label">Lowest Enrolment State</p>
-                    <p class="stat-value" id="bottomState">-</p>
-                    <div class="stat-trend" style="color: #ef4444;" id="bottomStateVal">
-                        - enrolments
-                    </div>
-                </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <!-- Bar Chart: Total Enrolments per State -->
-                <div class="chart-card">
-                    <div class="card-header-row">
-                        <div>
-                            <h2 class="chart-title">State-wise Enrolment Distribution</h2>
-                            <p class="card-description">Total enrolments comparisons across states</p>
-                        </div>
-                    </div>
-                    <div class="chart-container-bar">
-                        <canvas id="stateBarChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Heatmap: State x Age Group -->
-                <div class="chart-card">
-                    <div class="card-header-row">
-                        <div>
-                            <h2 class="chart-title">Age Demographic Heatmap</h2>
-                            <p class="card-description">Distribution density by state and age group (darker cells
-                                indicate higher enrolment)</p>
-                        </div>
-                    </div>
-                    <div class="chart-container-heatmap" id="heatmapContainer">
-                        <!-- Heatmap will be injected here as a table -->
-                    </div>
-                </div>
-            </div>
-
-            <div
-                style="margin-top: 2rem; padding: 1rem; background: #eff6ff; border-radius: 0.5rem; border: 1px solid #bfdbfe; color: #1e40af; display: flex; gap: 0.75rem; align-items: start;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    style="margin-top: 2px; flex-shrink: 0;">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <line x1="10" y1="9" x2="8" y2="9" />
-                </svg>
+        <main class="main-content">
+            <!-- Header (Top Bar) -->
+            <header class="top-header">
                 <div>
-                    <strong>UIDAI Insight:</strong> <span id="insightText">Review regional policy focus for states with
-                        low child enrolment rates.</span>
+                    <h1 class="page-title">Enrolment Analytics</h1>
+                    <p class="page-subtitle">Regional distribution and age-wise breakdown</p>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Share Modal -->
-    <div id="shareModal" class="modal-overlay" style="display: none;">
-        <div class="modal-card" style="max-width: 450px;">
-            <div class="modal-header">
-                <h3>Share Dashboard Access</h3>
-                <button class="modal-close" id="closeShareModal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
-                    Create a secure link to share this analysis dashboard with stakeholders. You can optionally protect
-                    it with a password.
-                </p>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label
-                        style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-primary);">Access
-                        Password (Optional)</label>
-                    <input type="password" id="sharePassword" placeholder="Enter a secure password..."
-                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-family: inherit;">
+                <div class="header-actions">
+                    <button class="action-btn" id="shareBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                        Share
+                    </button>
+                    <button class="action-btn" id="exportBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        Export PDF
+                    </button>
+                    <a href="index.html" class="primary-btn blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Upload New
+                    </a>
                 </div>
+            </header>
 
-                <div id="generatedLinkArea"
-                    style="display: none; background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Shareable Link
-                    </p>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="shareLinkInput" readonly
-                            value="https://analytics.uidai.gov.in/s/7x9s2..."
-                            style="flex: 1; border: none; background: transparent; font-family: monospace; color: var(--text-primary); font-size: 0.9rem;">
-                        <button id="copyLinkBtn"
-                            style="border: none; background: none; color: var(--primary-color); cursor: pointer; font-weight: 600; font-size: 0.85rem;">Copy</button>
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <div class="filter-item">
+                        <label>TIME PERIOD</label>
+                        <select>
+                            <option>Last 30 Days</option>
+                            <option>Last Quarter</option>
+                            <option>Year to Date</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>REGION</label>
+                        <select>
+                            <option>All India</option>
+                            <option>North Zone</option>
+                            <option>South Zone</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>UPDATE TYPE</label>
+                        <select>
+                            <option>All Types</option>
+                            <option>Demographic</option>
+                            <option>Biometric</option>
+                        </select>
                     </div>
                 </div>
+
             </div>
-            <div class="modal-footer">
-                <button class="btn-primary" id="generateLinkBtn" style="width: 100%;">Generage Secure Link</button>
+
+            <!-- Loading System -->
+            <div id="loadingState" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Analyzing datasets...</p>
             </div>
-        </div>
+
+            <!-- Dashboard Content (Accordion Style) -->
+            <div id="dashboardContent" class="dashboard-accordion">
+
+                <!-- Section 1: Snapshot (Expanded by default) -->
+                <div class="accordion-item active">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <div class="accordion-title-group">
+                            <span class="accordion-icon blue">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7" />
+                                    <rect x="14" y="3" width="7" height="7" />
+                                    <rect x="14" y="14" width="7" height="7" />
+                                    <rect x="3" y="14" width="7" height="7" />
+                                </svg>
+                            </span>
+                            <h3>Current Snapshot: High-Level Indicators</h3>
+                        </div>
+                        <span class="accordion-chevron">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <div class="accordion-body">
+                        <div class="snapshot-grid">
+                            <!-- Card 1 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Total Enrolments</span>
+                                    <span class="trend-badge positive">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                            <polyline points="17 6 23 6 23 12" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div class="card-value" id="totalEnrolments">-</div>
+                                <div class="card-subtext positive">
+                                    ↑ 2.4% <span class="text-muted">vs last period</span>
+                                </div>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">MoM Growth</span>
+                                    <span class="trend-badge neutral">~</span>
+                                </div>
+                                <div class="card-value" id="momGrowthVal">+2.4%</div>
+                                <div class="card-subtext text-muted">
+                                    Steady upward trend observed in rural sectors.
+                                </div>
+                            </div>
+
+                            <!-- Card 3 -->
+                            <div class="clean-card highlight-border">
+                                <div class="card-top">
+                                    <span class="card-label">Total Updates</span>
+                                    <span class="trend-badge warning">!</span>
+                                </div>
+                                <div class="card-value" id="totalUpdates">-</div>
+                                <div class="card-subtext error">
+                                    High Backlog detected
+                                </div>
+                            </div>
+
+                            <!-- Card 4 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Enrolment/Update Ratio</span>
+                                    <span class="trend-badge neutral">●</span>
+                                </div>
+                                <div class="card-value" id="ratioVal">1:3.6</div>
+                                <div class="card-subtext text-muted">
+                                    Updates significantly outpace new enrolments.
+                                </div>
+                            </div>
+
+                            <!-- Card 5 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Most Active Region</span>
+                                    <span class="trend-badge blue">📍</span>
+                                </div>
+                                <div class="card-value sm" id="topState">-</div>
+                                <div class="tag-pill blue">High Volume</div>
+                            </div>
+                        </div>
+                        <div class="accordion-footer">
+                            <a href="#" class="link-btn">View Detailed Report →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Trends That Matter (User's Workspace) -->
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <div class="accordion-title-group">
+                            <span class="accordion-icon blue"> #2 </span>
+                            <h3>Second Layer: Trends That Matter</h3>
+                        </div>
+                        <span class="accordion-chevron">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="accordion-body hidden-charts-area">
+                        <!-- All 4 Charts Required by User -->
+                        <div class="charts-grid-2">
+                            <!-- Chart 1: Enrolment Trends -->
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Enrolment Growth</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <canvas id="enrolmentTrendChart"></canvas>
+                                </div>
+                                <div class="chart-footer">
+                                    <p class="chart-explanation">Enrolment activity peaks between March-May every year.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Chart 2: Update Trends -->
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Updates Over Time</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <canvas id="updatesTrendChart"></canvas>
+                                </div>
+                                <div class="chart-footer">
+                                    <p class="chart-explanation">Biometric updates show a steady 15% increase.</p>
+                                </div>
+                            </div>
+
+                            <!-- Chart 3: Region-wise Activity -->
+                            <div class="chart-card wide">
+                                <div class="chart-header">
+                                    <h3>Region-wise Activity</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <canvas id="regionBarChart"></canvas>
+                                </div>
+                                <div class="chart-footer">
+                                    <p class="chart-explanation">Northern states contribute 45% of total document
+                                        updates.</p>
+                                </div>
+                            </div>
+
+                            <!-- Chart 4: Demographic vs Biometric -->
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Update Distribution</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <canvas id="updateTypeChart"></canvas>
+                                </div>
+                                <div class="chart-footer">
+                                    <p class="chart-explanation">Demographic changes outweigh biometric updates by 2:1.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
     </div>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="dashboard.js"></script>
 </body>
 

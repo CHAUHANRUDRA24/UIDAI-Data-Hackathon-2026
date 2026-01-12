@@ -4,8 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="UIDAI Data Hackathon - Upload and analyze CSV/ZIP reports with AI-powered insights">
     <title>Upload Report | UIDAI Analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,67 +12,48 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="page-background">
         <div class="upload-card">
-            <!-- Header -->
             <div class="card-header">
-                <h1 class="title">Upload Report CSV</h1>
-                <p class="subtitle">Upload a UIDAI analytics report to validate structure and generate insights</p>
+                <h1>Upload Report CSV</h1>
+                <p>Upload a UIDAI analytics report to validate structure and generate insights</p>
             </div>
 
-            <!-- Drop Zone -->
-            <div class="drop-zone" id="dropZone">
-                <div class="drop-zone-content">
-                    <div class="upload-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                    </div>
-                    <p class="drop-text">Drag & drop your CSV or ZIP here or click to browse</p>
-                    <p class="file-limit">CSV or ZIP (containing CSV) up to 40MB</p>
-                    <button type="button" class="browse-btn" id="browseBtn">Browse Files</button>
+            <div class="drop-area" id="dropZone">
+                <div class="upload-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
                 </div>
+                <p class="drop-text-primary">Drag & drop your CSV or ZIP here or click to browse</p>
+                <p class="drop-text-secondary">CSV or ZIP (containing CSV) up to 25MB</p>
+                <button type="button" class="btn-browse" id="browseBtn">Browse Files</button>
                 <input type="file" id="fileInput" accept=".csv,.zip" hidden>
             </div>
 
-            <!-- Selected File Preview -->
+            <!-- Selected File Preview (Hidden initially) -->
             <div class="file-preview" id="filePreview">
-                <div class="file-info">
-                    <div class="file-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="16" y1="13" x2="8" y2="13" />
-                            <line x1="16" y1="17" x2="8" y2="17" />
-                            <polyline points="10 9 9 9 8 9" />
-                        </svg>
-                    </div>
-                    <div class="file-details">
-                        <span class="file-name" id="fileName"></span>
-                        <span class="file-size" id="fileSize"></span>
-                    </div>
+                <div class="file-info-row">
+                    <span class="file-name" id="fileName">No file selected</span>
+                    <button id="removeBtn" class="btn-icon">×</button>
                 </div>
-                <button type="button" class="remove-btn" id="removeBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
+                <div class="file-meta" id="fileSize"></div>
             </div>
 
-            <!-- Upload Button -->
-            <button type="button" class="upload-btn" id="uploadBtn" disabled>
-                <span class="btn-text">Upload & Analyze</span>
-                <div class="loader" id="loader"></div>
-            </button>
+            <!-- Upload Progres (Hidden initially) -->
+            <div class="upload-progress" id="uploadingCard" style="display:none;">
+                <div class="progress-bar-container">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressPercent">Analyzing...</p>
+            </div>
 
-            <!-- Security Notice -->
-            <div class="security-notice">
+            <button class="btn-primary" id="uploadBtn" disabled>Upload & Analyze</button>
+
+            <div class="security-footer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -83,110 +62,15 @@
                 <span>Files are processed securely and not shared without permission</span>
             </div>
         </div>
-
-        <!-- Uploading Progress Card (Hidden by default) -->
-        <div class="upload-card uploading-card" id="uploadingCard" style="display: none;">
-            <!-- Upload Cloud Icon -->
-            <div class="uploading-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-            </div>
-
-            <!-- Header -->
-            <h2 class="uploading-title">Uploading secure document</h2>
-            <p class="uploading-subtitle">This may take a few moments depending on file size and connection speed.</p>
-
-            <!-- File Info Card -->
-            <div class="uploading-file-card">
-                <div class="uploading-file-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                    </svg>
-                </div>
-                <div class="uploading-file-details">
-                    <span class="uploading-file-name" id="uploadingFileName">document.csv</span>
-                    <span class="uploading-file-meta" id="uploadingFileMeta">0 KB • CSV Document</span>
-                </div>
-                <div class="uploading-lock-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Progress Section -->
-            <div class="progress-section">
-                <div class="progress-header">
-                    <div class="progress-status">
-                        <svg class="progress-spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                        </svg>
-                        <span>Analyzing document structure...</span>
-                    </div>
-                    <span class="progress-percent" id="progressPercent">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <!-- Processing Button -->
-            <button type="button" class="upload-btn processing" disabled>
-                <svg class="btn-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                <span>Processing Upload...</span>
-            </button>
-
-            <!-- Cancel Link -->
-            <button type="button" class="cancel-link" id="cancelUploadBtn">Cancel upload</button>
-
-            <!-- Demo Mode (Added for convenience) -->
-            <div style="margin-top: 1rem; text-align: center;">
-                <button type="button" id="demoBtn"
-                    style="background: none; border: none; color: #64748b; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
-                    Try with Demo Data
-                </button>
-            </div>
-
-            <!-- Encryption Notice -->
-            <div class="encryption-notice">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                <span>End-to-end encrypted transfer</span>
-            </div>
-        </div>
     </div>
 
-    <!-- Success Modal -->
+    <!-- Hidden Success Modal Triggers (kept for logic compatibility) -->
     <div class="modal-overlay" id="successModal">
         <div class="modal">
-            <div class="modal-icon success">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                </svg>
-            </div>
-            <h2 class="modal-title">Upload Successful!</h2>
-            <p class="modal-text">Your file has been uploaded and CSV data extracted successfully. Analysis is in
-                progress.</p>
-            <button type="button" class="modal-btn" id="modalCloseBtn">Continue</button>
+            <div class="modal-icon success">✓</div>
+            <h2>Analysis Complete</h2>
+            <p>Redirecting to dashboard...</p>
+            <button id="modalCloseBtn" style="display:none">Continue</button>
         </div>
     </div>
 
