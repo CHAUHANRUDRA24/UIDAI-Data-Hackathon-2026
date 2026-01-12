@@ -348,58 +348,47 @@ async function uploadFile() {
                         if (!stateCol) {
                             const keys = results.meta.fields || Object.keys(rows[0]);
                             
-                            // Find state column
+                            // Find state column (exact match for UIDAI data)
                             stateCol = keys.find(k => k.toLowerCase() === 'state') ||
                                 keys.find(k => k.toLowerCase().includes('state')) ||
-                                keys.find(k => k.toLowerCase().includes('district')) ||
                                 keys[0];
 
-                            // Skip patterns - columns we don't want to aggregate
-                            const skipPatterns = ['date', 'pincode', 'pin', 'code', 'id', 'registrar', 'source', 'month', 'year', 'week'];
+                            // UIDAI specific column patterns:
+                            // Enrolment: age_0_5, age_5_17, age_18_greater
+                            // Biometric: bio_age_5_17, bio_age_17_
                             
-                            // Include patterns - columns that contain count/numeric data
-                            const includePatterns = [
-                                'age', 'yrs', 'years', 'enrol', 'update', 'count', 'total',
-                                'bio', 'demo', 'child', 'adult', 'senior', 'biometric', 'demographic',
-                                '0_5', '5_17', '17_', '18_', '0-5', '5-17', '17-', '18-',
-                                'greater', 'plus', 'above', 'below', 'under', 'over'
-                            ];
+                            // Columns to SKIP
+                            const skipCols = ['date', 'pincode', 'district'];
                             
                             globalAgeCols = keys.filter(k => {
-                                // Skip state column
-                                if (k === stateCol) return false;
-                                
                                 const kLower = k.toLowerCase();
                                 
-                                // Skip if it matches skip patterns
-                                if (skipPatterns.some(p => kLower.includes(p))) return false;
+                                // Skip non-data columns
+                                if (k === stateCol) return false;
+                                if (skipCols.includes(kLower)) return false;
                                 
-                                // Include if it matches include patterns
-                                if (includePatterns.some(p => kLower.includes(p))) return true;
+                                // Include UIDAI specific patterns
+                                // Enrolment age columns: age_0_5, age_5_17, age_18_greater
+                                if (kLower.startsWith('age_')) return true;
                                 
-                                // Include if it starts with a number (like "0_5", "5_17")
-                                if (/^\d/.test(k)) return true;
-                                
-                                // Include if it's a simple numeric column name
-                                if (/^\d+[-_]?\d*$/.test(k)) return true;
+                                // Biometric columns: bio_age_5_17, bio_age_17_
+                                if (kLower.startsWith('bio_')) return true;
                                 
                                 return false;
                             });
                             
-                            // If no columns detected, try to find ALL numeric-looking columns
-                            if (globalAgeCols.length === 0) {
-                                globalAgeCols = keys.filter(k => {
-                                    if (k === stateCol) return false;
-                                    const kLower = k.toLowerCase();
-                                    if (skipPatterns.some(p => kLower.includes(p))) return false;
-                                    // Check if first row has a numeric value
-                                    const sampleVal = rows[0][k];
-                                    const numVal = parseFloat(String(sampleVal).replace(/,/g, ''));
-                                    return !isNaN(numVal) && numVal > 0;
-                                });
-                            }
+                            // Detect file type based on columns
+                            const hasEnrolmentCols = globalAgeCols.some(c => c.toLowerCase().startsWith('age_') && !c.toLowerCase().startsWith('bio_'));
+                            const hasBiometricCols = globalAgeCols.some(c => c.toLowerCase().startsWith('bio_'));
                             
-                            console.log('Identified columns:', { stateCol, ageCols: globalAgeCols });
+                            let fileType = 'unknown';
+                            if (hasEnrolmentCols && !hasBiometricCols) fileType = 'enrolment';
+                            if (hasBiometricCols && !hasEnrolmentCols) fileType = 'biometric';
+                            if (hasEnrolmentCols && hasBiometricCols) fileType = 'combined';
+                            
+                            console.log('📊 File Type Detected:', fileType);
+                            console.log('📍 State Column:', stateCol);
+                            console.log('📈 Data Columns:', globalAgeCols);
                         }
 
                         // Process Rows

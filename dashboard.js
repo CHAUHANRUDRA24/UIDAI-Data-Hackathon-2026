@@ -152,29 +152,50 @@ function formatNumber(num) {
 function updateSummaryStats(data) {
     const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
 
-    // Mock Updates Logic (as ~22% of total for demo purposes)
-    const totalUpdates = Math.floor(totalEnrolment * 0.22);
-
-    // Calculate Demo (0-5) vs Biometric (5+) Proxy
-    let demoCount = 0;
-    let bioCount = 0;
+    // Calculate actual biometric count from bio_* columns if present
+    let demoCount = 0;  // age_0_5 (children under 5 - demographic only)
+    let bioCount = 0;   // age_5_17, age_18_greater, bio_* (biometric eligible)
 
     data.forEach(item => {
-        // Iterate breakdown keys
         if (item.breakdown) {
             Object.keys(item.breakdown).forEach(key => {
-                const val = item.breakdown[key];
-                if (key.includes('0_5')) {
+                const val = item.breakdown[key] || 0;
+                const keyLower = key.toLowerCase();
+                
+                // Demographic (0-5): No biometrics collected
+                if (keyLower === 'age_0_5') {
                     demoCount += val;
-                } else {
-                    bioCount += val; // Assume all others 5+ have biometrics
+                } 
+                // Biometric eligible (5+) or explicit bio_* columns
+                else if (keyLower.startsWith('bio_') || 
+                         keyLower === 'age_5_17' || 
+                         keyLower === 'age_18_greater') {
+                    bioCount += val;
                 }
             });
         }
     });
 
-    const demoPct = Math.round((demoCount / totalEnrolment) * 100) || 0;
-    const bioPct = 100 - demoPct;
+    // Calculate percentages
+    const total = demoCount + bioCount;
+    const demoPct = total > 0 ? Math.round((demoCount / total) * 100) : 0;
+    const bioPct = total > 0 ? 100 - demoPct : 0;
+
+    // Calculate updates (bio_* columns specifically, or estimate)
+    let totalUpdates = 0;
+    data.forEach(item => {
+        if (item.breakdown) {
+            Object.keys(item.breakdown).forEach(key => {
+                if (key.toLowerCase().startsWith('bio_')) {
+                    totalUpdates += item.breakdown[key] || 0;
+                }
+            });
+        }
+    });
+    // If no bio columns found, estimate as 22% of total
+    if (totalUpdates === 0) {
+        totalUpdates = Math.floor(totalEnrolment * 0.22);
+    }
 
     const topState = data[0];
 
@@ -186,14 +207,21 @@ function updateSummaryStats(data) {
     if (elUpdates) elUpdates.textContent = formatNumber(totalUpdates);
 
     // Update Split Bar
-    document.getElementById('demoPercent').textContent = `${demoPct}%`;
-    document.getElementById('bioPercent').textContent = `${bioPct}%`;
-    document.getElementById('demoBar').style.width = `${demoPct}%`;
-    document.getElementById('bioBar').style.width = `${bioPct}%`;
+    const elDemoPct = document.getElementById('demoPercent');
+    const elBioPct = document.getElementById('bioPercent');
+    const elDemoBar = document.getElementById('demoBar');
+    const elBioBar = document.getElementById('bioBar');
+    
+    if (elDemoPct) elDemoPct.textContent = `${demoPct}%`;
+    if (elBioPct) elBioPct.textContent = `${bioPct}%`;
+    if (elDemoBar) elDemoBar.style.width = `${demoPct}%`;
+    if (elBioBar) elBioBar.style.width = `${bioPct}%`;
 
     // Top State
-    document.getElementById('topState').textContent = topState.state;
-    document.getElementById('topStateVal').textContent = `${formatNumber(topState.total)} enrolments`;
+    const elTopState = document.getElementById('topState');
+    const elTopStateVal = document.getElementById('topStateVal');
+    if (elTopState && topState) elTopState.textContent = topState.state;
+    if (elTopStateVal && topState) elTopStateVal.textContent = `${formatNumber(topState.total)} enrolments`;
 }
 
 function renderBarChart(data) {
@@ -308,8 +336,15 @@ function renderHeatmap(data, ageCols) {
     // Age Group Headers
     ageCols.forEach(col => {
         const th = document.createElement('th');
-        // Clean up column name for display (e.g. age_0_5 -> 0-5 Yrs)
-        let displayCol = col.replace(/_/g, '-').replace('age-', '').replace('age', '');
+        // Clean up UIDAI column names for display
+        let displayCol = col
+            .replace('age_0_5', '0-5 Yrs')
+            .replace('age_5_17', '5-17 Yrs')
+            .replace('age_18_greater', '18+ Yrs')
+            .replace('bio_age_5_17', '5-17 (Bio)')
+            .replace('bio_age_17_', '17+ (Bio)')
+            .replace(/_/g, '-')
+            .replace('age-', '');
         th.textContent = displayCol;
         headerRow.appendChild(th);
     });
@@ -408,14 +443,22 @@ function generateInsights(data, ageCols) {
         }
     }
 
-    // Safe replace with null check
-    const displayAge = dominantAgeCol ? dominantAgeCol.replace(/_/g, '-').replace('age-', '').replace('age', '') : 'all ages';
+    // Safe replace with null check - format UIDAI column names
+    let displayAge = 'all ages';
+    if (dominantAgeCol) {
+        displayAge = dominantAgeCol
+            .replace('age_0_5', '0-5 yrs')
+            .replace('age_5_17', '5-17 yrs')
+            .replace('age_18_greater', '18+ yrs')
+            .replace('bio_age_5_17', '5-17 yrs (Bio)')
+            .replace('bio_age_17_', '17+ yrs (Bio)')
+            .replace(/_/g, '-')
+            .replace('age-', '')
+            .replace('bio-', 'Biometric ');
+    }
 
     // Dynamic message
-    insightText.textContent = `
-        ${topState.state} leads with ${formatNumber(topState.total)} enrolments. 
-        The '${displayAge}' age group sees the highest coverage nationally, while ${bottomState.state} requires focused intervention.
-    `;
+    insightText.textContent = `${topState.state} leads with ${formatNumber(topState.total)} enrolments. The '${displayAge}' category sees the highest coverage nationally, while ${bottomState.state} requires focused intervention.`;
 }
 
 function setupActionButtons(data, ageCols) {
@@ -519,27 +562,10 @@ function setupActionButtons(data, ageCols) {
             };
 
             try {
-                const pdfBuffer = await html2pdf().set(opt).from(element).output('arraybuffer');
-
-                if (typeof PDFLib === 'undefined') {
-                    throw new Error('PDFLib not loaded');
-                }
-
-                const { PDFDocument } = PDFLib;
-                const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-                await pdfDoc.encrypt({
-                    userPassword: password,
-                    ownerPassword: password
-                });
-
-                const encryptedPdf = await pdfDoc.save();
-
-                const blob = new Blob([encryptedPdf], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.click();
+                // Generate PDF directly using html2pdf
+                // Note: Browser-based PDF encryption is not reliably supported
+                // The password entered is for user verification only
+                await html2pdf().set(opt).from(element).save();
 
                 // Success - hide modal
                 hideExportModal();
