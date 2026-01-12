@@ -15,6 +15,15 @@ const uploadBtn = document.getElementById('uploadBtn');
 const successModal = document.getElementById('successModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 
+// Uploading card elements
+const uploadingCard = document.getElementById('uploadingCard');
+const uploadingFileName = document.getElementById('uploadingFileName');
+const uploadingFileMeta = document.getElementById('uploadingFileMeta');
+const progressPercent = document.getElementById('progressPercent');
+const progressFill = document.getElementById('progressFill');
+const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+const mainUploadCard = document.querySelector('.upload-card:not(.uploading-card)');
+
 // Configuration
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
 const ALLOWED_TYPES = {
@@ -25,6 +34,7 @@ const ALLOWED_TYPES = {
 // State
 let selectedFile = null;
 let extractedCsvFiles = [];
+let uploadCancelled = false;
 
 /**
  * Format file size to human-readable format
@@ -39,6 +49,17 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Get file type display name
+ * @param {File} file - File to check
+ * @returns {string} File type name
+ */
+function getFileTypeName(file) {
+    if (file.name.toLowerCase().endsWith('.csv')) return 'CSV Document';
+    if (file.name.toLowerCase().endsWith('.zip')) return 'ZIP Archive';
+    return 'Document';
 }
 
 /**
@@ -233,32 +254,78 @@ function showError(message) {
 }
 
 /**
- * Simulate file upload (replace with actual API call)
+ * Show uploading progress card
+ */
+function showUploadingCard() {
+    // Update file info in uploading card
+    uploadingFileName.textContent = selectedFile.name;
+    uploadingFileMeta.textContent = `${formatFileSize(selectedFile.size)} • ${getFileTypeName(selectedFile)}`;
+
+    // Reset progress
+    progressPercent.textContent = '0%';
+    progressFill.style.width = '0%';
+
+    // Hide main card, show uploading card
+    mainUploadCard.style.display = 'none';
+    uploadingCard.style.display = 'block';
+}
+
+/**
+ * Hide uploading progress card
+ */
+function hideUploadingCard() {
+    uploadingCard.style.display = 'none';
+    mainUploadCard.style.display = 'block';
+}
+
+/**
+ * Update progress bar
+ * @param {number} percent - Progress percentage (0-100)
+ */
+function updateProgress(percent) {
+    progressPercent.textContent = `${Math.round(percent)}%`;
+    progressFill.style.width = `${percent}%`;
+}
+
+/**
+ * Simulate file upload with progress
  */
 async function uploadFile() {
     if (!selectedFile) return;
 
-    // Show loading state
-    uploadBtn.classList.add('loading');
-    uploadBtn.disabled = true;
+    uploadCancelled = false;
+
+    // Show uploading card
+    showUploadingCard();
 
     try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Simulate upload progress
+        for (let i = 0; i <= 100; i += 2) {
+            if (uploadCancelled) {
+                hideUploadingCard();
+                return;
+            }
+
+            updateProgress(i);
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
 
         // In a real application, you would:
         // const formData = new FormData();
         // formData.append('file', selectedFile);
         // 
-        // If ZIP was uploaded, you might want to send extracted CSVs:
-        // extractedCsvFiles.forEach((csv, index) => {
-        //     formData.append(`csv_${index}`, csv.content, csv.name);
+        // const xhr = new XMLHttpRequest();
+        // xhr.upload.addEventListener('progress', (e) => {
+        //     if (e.lengthComputable) {
+        //         updateProgress((e.loaded / e.total) * 100);
+        //     }
         // });
-        //
-        // const response = await fetch('/api/upload', {
-        //     method: 'POST',
-        //     body: formData
-        // });
+        // 
+        // xhr.open('POST', '/api/upload');
+        // xhr.send(formData);
+
+        // Hide uploading card
+        hideUploadingCard();
 
         // Show success modal
         successModal.classList.add('active');
@@ -267,11 +334,18 @@ async function uploadFile() {
         clearFile();
 
     } catch (error) {
+        hideUploadingCard();
         showError('Upload failed. Please try again.');
-    } finally {
-        uploadBtn.classList.remove('loading');
-        uploadBtn.disabled = selectedFile === null;
     }
+}
+
+/**
+ * Cancel the upload
+ */
+function cancelUpload() {
+    uploadCancelled = true;
+    hideUploadingCard();
+    showError('Upload cancelled');
 }
 
 /**
@@ -307,23 +381,39 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // Drag and drop events
+let dragCounter = 0;
+
+dropZone.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    dropZone.classList.add('drag-over');
+});
+
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.add('drag-over');
 });
 
 dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('drag-over');
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter === 0) {
+        dropZone.classList.remove('drag-over');
+    }
 });
 
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
     dropZone.classList.remove('drag-over');
 
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        handleFileSelect(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+        handleFileSelect(files[0]);
     }
 });
 
@@ -335,6 +425,9 @@ removeBtn.addEventListener('click', (e) => {
 
 // Upload button
 uploadBtn.addEventListener('click', uploadFile);
+
+// Cancel upload button
+cancelUploadBtn.addEventListener('click', cancelUpload);
 
 // Modal close button
 modalCloseBtn.addEventListener('click', closeModal);
