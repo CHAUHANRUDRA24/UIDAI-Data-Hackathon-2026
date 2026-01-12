@@ -553,19 +553,54 @@ function setupActionButtons(data, ageCols) {
             const filename = `uidai_analytics_report_${date}.pdf`;
             const element = document.getElementById('dashboardContent');
 
-            const opt = {
-                margin: [0.5, 0.5],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-            };
-
             try {
-                // Generate PDF directly using html2pdf
-                // Note: Browser-based PDF encryption is not reliably supported
-                // The password entered is for user verification only
-                await html2pdf().set(opt).from(element).save();
+                // Step 1: Capture the dashboard content as canvas using html2canvas
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                // Step 2: Convert canvas to image data
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                // Step 3: Calculate dimensions for A4 landscape
+                const imgWidth = 297; // A4 landscape width in mm
+                const pageHeight = 210; // A4 landscape height in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                // Step 4: Create jsPDF with encryption
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4',
+                    encryption: {
+                        userPassword: password,
+                        ownerPassword: password,
+                        userPermissions: ['print', 'copy']
+                    }
+                });
+
+                // Step 5: Add image to PDF (handle multi-page if needed)
+                let position = 0;
+                let heightLeft = imgHeight;
+
+                // Add first page
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                // Add additional pages if content is longer than one page
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                // Step 6: Save the password-protected PDF
+                pdf.save(filename);
 
                 // Success - hide modal
                 hideExportModal();
@@ -744,15 +779,28 @@ function loadSnapshotData(summary) {
     // Update UI manually
     document.getElementById('totalEnrolments').textContent = formatNumber(summary.t);
     
-    // Show sharer info if available
-    const sharerInfo = summary.sharedBy ? `Shared by ${summary.sharedBy}` : 'Viewing Shared Snapshot';
-    document.getElementById('totalStatesSubtitle').textContent = sharerInfo;
+    // Show sharer info in header subtitle
+    const headerTitle = document.querySelector('.header-title');
+    if (headerTitle && summary.sharedBy) {
+        const existingSharerInfo = headerTitle.querySelector('.sharer-info');
+        if (existingSharerInfo) existingSharerInfo.remove();
+        
+        const sharerInfo = document.createElement('p');
+        sharerInfo.className = 'sharer-info';
+        sharerInfo.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #3b5bdb; margin-top: 0.25rem; font-weight: 500;';
+        const sharedDate = summary.sharedAt ? new Date(summary.sharedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '';
+        sharerInfo.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Shared by: ${summary.sharedBy}${sharedDate ? ` • ${sharedDate}` : ''}
+        `;
+        headerTitle.appendChild(sharerInfo);
+    }
 
     document.getElementById('topState').textContent = summary.ts;
     document.getElementById('topStateVal').textContent = formatNumber(summary.tv) + ' enrolments';
-
-    document.getElementById('bottomState').textContent = summary.bs;
-    document.getElementById('bottomStateVal').textContent = formatNumber(summary.bv) + ' enrolments';
 
     // Render Chart
     renderBarChart(top10Data);
@@ -774,9 +822,13 @@ function loadSnapshotData(summary) {
 
     document.getElementById('insightText').textContent = `${summary.ts} is the top performing state in this shared report.`;
 
-    // Adjust Header
+    // Adjust Header - hide Share button on shared reports
     const backBtn = document.querySelector('.back-btn');
     if (backBtn) backBtn.innerHTML = 'Upload Your Own File';
+    
+    // Hide Share button on shared reports
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) shareBtn.style.display = 'none';
 
     // Hide Loading
     const loadingState = document.getElementById('loadingState');
@@ -789,6 +841,10 @@ function loadSnapshotData(summary) {
 function handleEncryptedSnapshot(ciphertext) {
     const loadingState = document.getElementById('loadingState');
     if (!loadingState) return;
+    
+    // Hide Share button on shared reports immediately
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) shareBtn.style.display = 'none';
 
     loadingState.innerHTML = `
         <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px;">
@@ -810,28 +866,76 @@ function handleEncryptedSnapshot(ciphertext) {
             <p id="unlockError" style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; display: none;">Incorrect password</p>
         </div>
     `;
+    
+    // Add Enter key support for password input
+    const passwordInput = document.getElementById('unlockPassword');
+    const unlockBtn = document.getElementById('unlockBtn');
+    
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            unlockBtn.click();
+        }
+    });
 
-    document.getElementById('unlockBtn').addEventListener('click', () => {
+    unlockBtn.addEventListener('click', () => {
         const pass = document.getElementById('unlockPassword').value;
         const err = document.getElementById('unlockError');
+        
+        // Hide previous error
+        err.style.display = 'none';
+        
+        // Check if password is empty
+        if (!pass) {
+            err.textContent = 'Please enter a password';
+            err.style.display = 'block';
+            return;
+        }
 
         try {
+            // Decrypt using the exact password (no trimming)
             const bytes = CryptoJS.AES.decrypt(ciphertext, pass);
-            const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+            
+            // Try to convert to UTF-8 string
+            let decryptedString = '';
+            try {
+                decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+            } catch (encodeError) {
+                // UTF-8 encoding failed - wrong password
+                console.error('UTF-8 encoding failed:', encodeError);
+                err.textContent = 'Incorrect password';
+                err.style.display = 'block';
+                return;
+            }
 
-            if (decryptedString) {
-                const decryptedData = JSON.parse(decryptedString);
-                if (decryptedData && decryptedData.ts) {
-                    // Success
-                    loadSnapshotData(decryptedData);
-                } else {
-                    err.style.display = 'block';
-                }
+            // Check if decryption produced valid content
+            if (!decryptedString || decryptedString.length === 0) {
+                err.textContent = 'Incorrect password';
+                err.style.display = 'block';
+                return;
+            }
+            
+            // Try to parse JSON
+            let decryptedData;
+            try {
+                decryptedData = JSON.parse(decryptedString);
+            } catch (jsonError) {
+                console.error('JSON parse failed:', jsonError);
+                err.textContent = 'Incorrect password';
+                err.style.display = 'block';
+                return;
+            }
+            
+            // Validate the decrypted data structure
+            if (decryptedData && decryptedData.ts && decryptedData.d) {
+                // Success - load the snapshot
+                loadSnapshotData(decryptedData);
             } else {
+                err.textContent = 'Incorrect password';
                 err.style.display = 'block';
             }
         } catch (e) {
-            console.error(e);
+            console.error('Decryption error:', e);
+            err.textContent = 'Incorrect password';
             err.style.display = 'block';
         }
     });

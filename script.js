@@ -377,6 +377,20 @@ async function uploadFile() {
                                 return false;
                             });
                             
+                            // FALLBACK: If no UIDAI columns found, detect numeric columns
+                            if (globalAgeCols.length === 0) {
+                                console.log('⚠️ No UIDAI columns found, detecting numeric columns...');
+                                globalAgeCols = keys.filter(k => {
+                                    if (k === stateCol) return false;
+                                    const kLower = k.toLowerCase();
+                                    if (skipCols.includes(kLower)) return false;
+                                    // Check if first row has a numeric value
+                                    const sampleVal = rows[0][k];
+                                    const numVal = parseFloat(String(sampleVal).replace(/,/g, ''));
+                                    return !isNaN(numVal);
+                                });
+                            }
+                            
                             // Detect file type based on columns
                             const hasEnrolmentCols = globalAgeCols.some(c => c.toLowerCase().startsWith('age_') && !c.toLowerCase().startsWith('bio_'));
                             const hasBiometricCols = globalAgeCols.some(c => c.toLowerCase().startsWith('bio_'));
@@ -389,11 +403,19 @@ async function uploadFile() {
                             console.log('📊 File Type Detected:', fileType);
                             console.log('📍 State Column:', stateCol);
                             console.log('📈 Data Columns:', globalAgeCols);
+                            console.log('📋 All Columns:', keys);
                         }
 
                         // Process Rows
                         rows.forEach(row => {
-                            const state = row[stateCol] || 'Unknown';
+                            let state = row[stateCol];
+                            
+                            // Skip rows with empty or invalid state
+                            if (!state || state.trim() === '' || state === 'undefined' || state === 'null') {
+                                return; // Skip this row
+                            }
+                            
+                            state = state.trim();
 
                             if (!globalAggregates[state]) {
                                 globalAggregates[state] = {
@@ -436,6 +458,12 @@ async function uploadFile() {
             }
 
             const processedData = Object.values(globalAggregates);
+            
+            console.log('✅ Processing complete:', {
+                statesFound: processedData.length,
+                columnsUsed: globalAgeCols,
+                totalRecords: processedData.reduce((sum, s) => sum + s.total, 0)
+            });
 
             if (processedData.length > 0) {
                 // Sort by Total Enrolment Descending
@@ -449,17 +477,19 @@ async function uploadFile() {
                 try {
                     // Store the aggregated data in IndexedDB
                     await storeDataInDB(storagePacket);
-                    console.log('Aggregated data stored:', processedData.length, 'states');
+                    console.log('💾 Aggregated data stored:', processedData.length, 'states');
 
                     // Show success modal
                     successModal.classList.add('active');
                 } catch (storageError) {
                     console.error('Storage error:', storageError);
-                    showError('Failed to store data.');
+                    showError(`Failed to store data: ${storageError.message || 'Unknown error'}`);
                     return;
                 }
             } else {
-                showError('No valid data found in the selected file(s).');
+                console.error('❌ No valid data found. Check if columns match expected patterns.');
+                console.log('Expected columns: age_0_5, age_5_17, age_18_greater OR bio_age_5_17, bio_age_17_');
+                showError('No valid data found. Please check CSV format.');
             }
 
         } catch (err) {
