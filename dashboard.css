@@ -392,7 +392,7 @@ body {
 .charts-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
     margin-top: 1rem;
 }
 
@@ -401,10 +401,19 @@ body {
     border-radius: var(--radius-m);
     padding: 1.25rem;
     background: white;
+    min-width: 0;
+    /* Critical for grid items to allow standard shrinking behavior */
+    overflow: hidden;
+    /* Ensures content doesn't bleed out */
 }
 
 .chart-card.wide {
     grid-column: span 2;
+}
+
+.chart-card.wide .chart-body {
+    min-height: 300px;
+    /* Give wide charts more height */
 }
 
 .chart-header h3 {
@@ -448,4 +457,44 @@ body {
     .main-content {
         margin-left: 0;
     }
+}
+
+/* Scrollable Chart Support */
+.chart-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    /* Space for scrollbar */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+    /* Custom Scrollbar Styling */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.chart-scroll-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.chart-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chart-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 6px;
+}
+
+/* Force the canvas to be wide inside the scrolling container */
+#regionBarChart {
+    width: 100%;
+    min-width: 0;
+}
+
+#enrolmentTrendChart,
+#updatesTrendChart,
+#updateTypeChart {
+    width: 100%;
+    min-width: 0;
+    /* Allow fitting */
 }

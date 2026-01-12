@@ -190,11 +190,18 @@ const commonOptions = {
     scales: {
         x: { grid: { display: false }, ticks: { font: { family: "'Inter', sans-serif" } } },
         y: { grid: { color: '#f1f5f9' }, ticks: { font: { family: "'Inter', sans-serif" } }, border: { display: false } }
+    },
+    layout: {
+        padding: {
+            bottom: 20,
+            left: 10,
+            right: 10
+        }
     }
 };
 
 function initializeCharts(data, totalEnrolment, totalUpdates) {
-    // 1. Enrolment Trend (Line)
+    // 1. Enrolment Trend (Line) - Blue with Gradient
     const ctxTrend = document.getElementById('enrolmentTrendChart');
     if (ctxTrend) {
         const trendData = generateTrendPoints(totalEnrolment);
@@ -203,6 +210,7 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
             data: {
                 labels: MONTHS,
                 datasets: [{
+                    label: 'Enrolments',
                     data: trendData,
                     borderColor: '#3b82f6', // Blue 500
                     backgroundColor: (ctx) => {
@@ -211,7 +219,7 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
                         gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
                         return gradient;
                     },
-                    borderWidth: 3,
+                    borderWidth: 2,
                     tension: 0.4,
                     fill: true,
                     pointBackgroundColor: '#fff',
@@ -228,19 +236,22 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
     // 2. Updates Trend (Line) - Purple
     const ctxUpdates = document.getElementById('updatesTrendChart');
     if (ctxUpdates) {
-        const updateTrendData = generateTrendPoints(totalUpdates, 12, 0.4); // More volatile
+        const updateTrendData = generateTrendPoints(totalUpdates, 12, 0.4);
         new Chart(ctxUpdates, {
             type: 'line',
             data: {
                 labels: MONTHS,
                 datasets: [{
+                    label: 'Updates',
                     data: updateTrendData,
-                    borderColor: '#9333ea', // Purple
-                    borderWidth: 3,
+                    borderColor: '#a855f7', // Purple 500
+                    borderWidth: 2,
                     tension: 0.4,
+                    fill: false,
                     pointBackgroundColor: '#fff',
-                    pointBorderColor: '#9333ea',
-                    pointRadius: 0, // Cleaner look
+                    pointBorderColor: '#a855f7',
+                    pointBorderWidth: 2,
+                    pointRadius: 0, // Hidden by default as per image style, visible on hover? Image shows smooth line.
                     pointHoverRadius: 6
                 }]
             },
@@ -248,34 +259,39 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
         });
     }
 
-    // 3. Region Bar Chart
+    // 3. Region Bar Chart - Green
     const ctxRegion = document.getElementById('regionBarChart');
     if (ctxRegion) {
-        // Top 8 states
         const topStates = data.slice(0, 8);
         new Chart(ctxRegion, {
             type: 'bar',
             data: {
                 labels: topStates.map(d => d.state),
                 datasets: [{
+                    label: 'Total Activity',
                     data: topStates.map(d => d.total),
-                    backgroundColor: '#10b981', // Green
-                    borderRadius: 6,
-                    barThickness: 20
+                    backgroundColor: '#10b981', // Emerald 500
+                    borderRadius: 4, // Rounded tops
+                    barThickness: 20,
+                    maxBarThickness: 30
                 }]
             },
-            options: commonOptions
+            options: {
+                ...commonOptions,
+                scales: {
+                    ...commonOptions.scales,
+                    y: { ...commonOptions.scales.y, beginAtZero: true }
+                }
+            }
         });
     }
 
-    // 4. Update Type (Stacked Bar)
-    // Simulate: Demographic vs Biometric
+    // 4. Update Distribution (Grouped Bar)
     const ctxType = document.getElementById('updateTypeChart');
     if (ctxType) {
-        // Last 6 months
         const shortMonths = MONTHS.slice(6);
-        const demoData = shortMonths.map(() => Math.floor(Math.random() * 50000) + 50000);
-        const bioData = shortMonths.map(() => Math.floor(Math.random() * 30000) + 20000);
+        const demoData = shortMonths.map(() => Math.floor(Math.random() * 50000) + 60000);
+        const bioData = shortMonths.map(() => Math.floor(Math.random() * 20000) + 10000);
 
         new Chart(ctxType, {
             type: 'bar',
@@ -285,22 +301,36 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
                     {
                         label: 'Demographic',
                         data: demoData,
-                        backgroundColor: '#f59e0b', // Orange
-                        stack: 'Stack 0',
-                        borderRadius: 4
+                        backgroundColor: '#f59e0b', // Amber/Orange
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.6,
+                        borderRadius: 4,
+                        stack: 'Stack 0'
                     },
                     {
                         label: 'Biometric',
                         data: bioData,
                         backgroundColor: '#64748b', // Slate
-                        stack: 'Stack 0',
-                        borderRadius: 4
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.6,
+                        borderRadius: 4,
+                        stack: 'Stack 0'
                     }
                 ]
             },
             options: {
                 ...commonOptions,
-                plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true } } }
+                scales: {
+                    x: {
+                        ...commonOptions.scales.x,
+                        stacked: true
+                    },
+                    y: {
+                        ...commonOptions.scales.y,
+                        stacked: true
+                    }
+                },
+                plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }
             }
         });
     }
