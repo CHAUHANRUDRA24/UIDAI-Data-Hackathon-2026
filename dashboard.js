@@ -440,62 +440,49 @@ function setupActionButtons(data, ageCols) {
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
             };
 
-            // Ask for Password
-            const password = prompt("To password protect this PDF, enter a password below.\nLeave empty for no password.");
+            // Ask for Password (Required)
+            let password = prompt("Enter a password to protect this PDF (Required):");
+            
+            // If cancelled or empty, show alert and return
+            if (!password || password.trim() === '') {
+                alert('PDF password is required for security. Export cancelled.');
+                return;
+            }
 
             // Temporarily hide buttons for clean print
-            const oldOpacity = element.style.opacity;
             exportBtn.textContent = 'Generating...';
             exportBtn.disabled = true;
 
             // Generate PDF logic with Encryption support
-            // html2pdf typical usage for buffer: .output('arraybuffer')
             html2pdf().set(opt).from(element).output('arraybuffer').then(async (pdfBuffer) => {
-                if (password && password.trim() !== '') {
-                    try {
-                        // Ensure PDFLib is loaded
-                        if (typeof PDFLib === 'undefined') {
-                            throw new Error('PDFLib not loaded');
-                        }
-
-                        const { PDFDocument } = PDFLib;
-                        const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-                        // Encrypt
-                        // Note: pdf-lib encryption requires specific permission constants or just generic settings
-                        // For simplicity in this version, we will just set passwords which implies standard permissions
-                        // Encrypt
-                        await pdfDoc.encrypt({
-                            userPassword: password,
-                            ownerPassword: password
-                            // permissions: defaults apply (printing allowed, copying allowed usually unless restricted)
-                        });
-
-                        const encryptedPdf = await pdfDoc.save();
-
-                        // Download Encrypted
-                        const blob = new Blob([encryptedPdf], { type: 'application/pdf' });
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        link.click();
-                    } catch (e) {
-                        console.error('Encryption failed', e);
-                        alert(`Encryption failed (${e.message}). Downloading unprotected PDF.`);
-                        // Fallback
-                        const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        link.click();
+                try {
+                    // Ensure PDFLib is loaded
+                    if (typeof PDFLib === 'undefined') {
+                        throw new Error('PDFLib not loaded');
                     }
-                } else {
-                    // No password - regular download
-                    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+
+                    const { PDFDocument } = PDFLib;
+                    const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+                    // Encrypt with password
+                    await pdfDoc.encrypt({
+                        userPassword: password,
+                        ownerPassword: password
+                    });
+
+                    const encryptedPdf = await pdfDoc.save();
+
+                    // Download Encrypted
+                    const blob = new Blob([encryptedPdf], { type: 'application/pdf' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = filename;
                     link.click();
+                    
+                    alert('PDF exported successfully with password protection!');
+                } catch (e) {
+                    console.error('Encryption failed', e);
+                    alert(`Encryption failed (${e.message}). Please try again.`);
                 }
 
                 // Reset Button
@@ -529,6 +516,7 @@ function setupActionButtons(data, ageCols) {
     const linkInput = document.getElementById('shareLinkInput');
     const copyBtn = document.getElementById('copyLinkBtn');
     const passInput = document.getElementById('sharePassword');
+    const sharerNameInput = document.getElementById('sharerName');
 
     if (shareBtn && shareModal) {
         shareBtn.addEventListener('click', () => {
@@ -541,6 +529,7 @@ function setupActionButtons(data, ageCols) {
             generateBtn.textContent = 'Generate Secure Link';
             generateBtn.disabled = false;
             passInput.value = '';
+            if (sharerNameInput) sharerNameInput.value = '';
         });
 
         const closeModal = () => {
@@ -556,17 +545,23 @@ function setupActionButtons(data, ageCols) {
         });
 
         generateBtn.addEventListener('click', async () => {
+            // Validate sharer name
+            const sharerName = sharerNameInput ? sharerNameInput.value.trim() : '';
+            if (!sharerName) {
+                alert('Please enter your name to share this report.');
+                return;
+            }
+
             generateBtn.textContent = 'Generating Secure Snapshot...';
             generateBtn.disabled = true;
 
             await new Promise(r => setTimeout(r, 800));
 
             // 1. Create a Lightweight Payload (Top 10 States + Summary)
-            // We cannot put 40MB in a URL, but we can put the "Executive Summary"
             const top10 = data.slice(0, 10).map(d => ({
                 s: d.state,
                 t: d.total
-            })); // { s: State, t: Total } to save space
+            }));
 
             const summary = {
                 t: data.reduce((acc, curr) => acc + curr.total, 0), // Total
@@ -574,7 +569,9 @@ function setupActionButtons(data, ageCols) {
                 tv: data[0].total,
                 bs: data[data.length - 1].state, // Bottom State
                 bv: data[data.length - 1].total,
-                d: top10
+                d: top10,
+                sharedBy: sharerName, // Add sharer name
+                sharedAt: new Date().toISOString() // Add timestamp
             };
 
             // 2. Encryption / Encoding Logic
@@ -600,8 +597,6 @@ function setupActionButtons(data, ageCols) {
                     return String.fromCharCode('0x' + p1);
                 }));
 
-
-            // 3. Construct URL
             // 3. Construct URL
             const safeEncoded = encodeURIComponent(encoded);
             const finalLink = `${window.location.origin}${window.location.pathname}?snapshot=${safeEncoded}`;
@@ -664,7 +659,10 @@ function loadSnapshotData(summary) {
 
     // Update UI manually
     document.getElementById('totalEnrolments').textContent = formatNumber(summary.t);
-    document.getElementById('totalStatesSubtitle').textContent = 'Viewing Shared Snapshot';
+    
+    // Show sharer info if available
+    const sharerInfo = summary.sharedBy ? `Shared by ${summary.sharedBy}` : 'Viewing Shared Snapshot';
+    document.getElementById('totalStatesSubtitle').textContent = sharerInfo;
 
     document.getElementById('topState').textContent = summary.ts;
     document.getElementById('topStateVal').textContent = formatNumber(summary.tv) + ' enrolments';
@@ -675,11 +673,19 @@ function loadSnapshotData(summary) {
     // Render Chart
     renderBarChart(top10Data);
 
-    // Hide heatmap
+    // Hide heatmap and show sharer info
     const heatmapContainer = document.querySelector('.chart-container-heatmap');
     if (heatmapContainer) {
-        heatmapContainer.innerHTML =
-            '<div style="text-align:center; padding: 2rem; color: #64748b;">Detailed heatmap data is not available in shared snapshots.<br>Please request the full file from the sender.</div>';
+        let shareMessage = '<div style="text-align:center; padding: 2rem; color: #64748b;">';
+        if (summary.sharedBy) {
+            const sharedDate = summary.sharedAt ? new Date(summary.sharedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '';
+            shareMessage += `<p style="font-weight: 600; color: #3b5bdb; margin-bottom: 0.5rem;">📤 Shared by: ${summary.sharedBy}</p>`;
+            if (sharedDate) {
+                shareMessage += `<p style="font-size: 0.85rem; margin-bottom: 1rem;">Shared on: ${sharedDate}</p>`;
+            }
+        }
+        shareMessage += 'Detailed heatmap data is not available in shared snapshots.<br>Please request the full file from the sender.</div>';
+        heatmapContainer.innerHTML = shareMessage;
     }
 
     document.getElementById('insightText').textContent = `${summary.ts} is the top performing state in this shared report.`;

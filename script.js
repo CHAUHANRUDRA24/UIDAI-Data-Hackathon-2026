@@ -553,51 +553,6 @@ document.addEventListener('keydown', (e) => {
         closeModal();
     }
 });
-
-// Demo Button Logic
-const demoBtn = document.getElementById('demoBtn');
-if (demoBtn) {
-    demoBtn.addEventListener('click', async () => {
-        try {
-            uploadingCard.style.display = 'block'; // Show loading state
-            mainUploadCard.style.display = 'none';
-            uploadingFileName.textContent = 'sample_enrolment.csv';
-            uploadingFileMeta.textContent = 'Demo Data';
-
-            const response = await fetch('sample_enrolment.csv');
-            if (!response.ok) throw new Error('Failed to load demo data');
-            const text = await response.text();
-
-            // Artificial delay to show "loading"
-            updateProgress(30);
-            await new Promise(r => setTimeout(r, 500));
-            updateProgress(70);
-            await new Promise(r => setTimeout(r, 500));
-            updateProgress(100);
-
-            Papa.parse(text, {
-                header: true,
-                skipEmptyLines: true,
-                complete: async function (results) {
-                    try {
-                        await storeDataInDB(results.data);
-                        successModal.classList.add('active');
-                        hideUploadingCard();
-                    } catch (e) {
-                        showError('Failed to store demo data in DB');
-                        hideUploadingCard();
-                    }
-                }
-            });
-
-        } catch (err) {
-            console.error(err);
-            hideUploadingCard();
-            showError('Could not load demo data.');
-        }
-    });
-}
-
 // ========================================
 // IndexedDB Storage Helpers (for larger datasets)
 // ========================================
