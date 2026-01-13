@@ -240,10 +240,14 @@ async function uploadFile() {
         // xhr.open('POST', '/api/upload');
         // xhr.send(formData);
 
-        // Update UI to show processing state
-        document.querySelector('.uploading-title').textContent = 'Processing Data...';
-        document.querySelector('.uploading-subtitle').textContent = 'Analyzing standard and large datasets. This may take a moment.';
-        document.querySelector('.progress-status span').textContent = 'Aggregating records...';
+        // Update UI to show processing state (with null checks)
+        const uploadingTitle = document.querySelector('.uploading-title');
+        const uploadingSubtitle = document.querySelector('.uploading-subtitle');
+        const progressStatus = document.querySelector('.progress-status span');
+        
+        if (uploadingTitle) uploadingTitle.textContent = 'Processing Data...';
+        if (uploadingSubtitle) uploadingSubtitle.textContent = 'Analyzing standard and large datasets. This may take a moment.';
+        if (progressStatus) progressStatus.textContent = 'Aggregating records...';
 
         // Keep progress at 100% visually or indeterminate
         updateProgress(100);
