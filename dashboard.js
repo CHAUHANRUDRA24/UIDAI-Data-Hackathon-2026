@@ -3,7 +3,7 @@
 // IndexedDB Helper (Shared)
 // ========================================
 const DB_NAME = 'UIDAI_Analytics_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Must match script.js version
 const STORE_NAME = 'enrolment_data';
 
 function initDB() {
