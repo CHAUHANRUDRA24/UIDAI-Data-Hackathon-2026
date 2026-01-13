@@ -268,15 +268,44 @@ async function uploadFile() {
                                 keys.find(k => k.toLowerCase().includes('state')) ||
                                 keys[0];
 
-                            globalAgeCols = keys.filter(k => k !== stateCol && (
-                                k.toLowerCase().startsWith('age') ||
-                                k.toLowerCase().includes('yrs') ||
-                                k.toLowerCase().includes('years')
-                            ));
+                            // UIDAI column patterns: age_0_5, age_5_17, age_18_greater, bio_age_5_17, bio_age_17_
+                            const skipCols = ['date', 'pincode', 'district'];
+                            
+                            globalAgeCols = keys.filter(k => {
+                                const kLower = k.toLowerCase();
+                                if (k === stateCol) return false;
+                                if (skipCols.includes(kLower)) return false;
+                                
+                                // Match UIDAI specific patterns
+                                if (kLower.startsWith('age_')) return true;
+                                if (kLower.startsWith('bio_')) return true;
+                                
+                                // Also match generic age patterns
+                                if (kLower.includes('yrs') || kLower.includes('years')) return true;
+                                
+                                return false;
+                            });
+                            
+                            // Fallback: detect numeric columns if no UIDAI columns found
+                            if (globalAgeCols.length === 0) {
+                                globalAgeCols = keys.filter(k => {
+                                    if (k === stateCol) return false;
+                                    const kLower = k.toLowerCase();
+                                    if (skipCols.includes(kLower)) return false;
+                                    const sampleVal = rows[0][k];
+                                    const numVal = parseFloat(String(sampleVal).replace(/,/g, ''));
+                                    return !isNaN(numVal);
+                                });
+                            }
+                            
+                            console.log('📊 Columns detected:', { stateCol, ageCols: globalAgeCols });
                         }
 
                         rows.forEach(row => {
-                            const state = row[stateCol] || 'Unknown';
+                            let state = row[stateCol];
+                            if (!state || state.trim() === '') return; // Skip empty states
+                            state = state.trim();
+                            
                             if (!globalAggregates[state]) {
                                 globalAggregates[state] = { state: state, total: 0, breakdown: {} };
                                 globalAgeCols.forEach(col => globalAggregates[state].breakdown[col] = 0);
@@ -307,7 +336,8 @@ async function uploadFile() {
 
             // Check if we actually found valid data
             if (!stateCol || globalAgeCols.length === 0) {
-                showError('Could not identify "State" or "Age" columns in the CSV. Please check the file format.');
+                console.error('❌ Column detection failed:', { stateCol, ageCols: globalAgeCols });
+                showError('Could not identify data columns. Expected: age_0_5, age_5_17, age_18_greater or bio_* columns.');
                 hideUploadingCard();
                 return;
             }
