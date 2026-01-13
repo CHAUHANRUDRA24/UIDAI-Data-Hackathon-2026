@@ -259,12 +259,18 @@ async function uploadFile() {
             let stateCol = '';
 
             const processFileStream = (fileBlock) => new Promise((resolve, reject) => {
+                console.log('📁 Starting to parse file...');
                 Papa.parse(fileBlock, {
                     header: true,
                     skipEmptyLines: true,
+                    error: function(err) {
+                        console.error('❌ Papa Parse error:', err);
+                        reject(err);
+                    },
                     chunk: function (results) {
-                        const rows = results.data;
-                        if (!rows || rows.length === 0) return;
+                        try {
+                            const rows = results.data;
+                            if (!rows || rows.length === 0) return;
 
                         if (!stateCol) {
                             const keys = results.meta.fields || Object.keys(rows[0]);
@@ -320,9 +326,14 @@ async function uploadFile() {
                                 globalAggregates[state].breakdown[col] += val;
                             });
                         });
+                        } catch (chunkErr) {
+                            console.error('❌ Chunk processing error:', chunkErr);
+                        }
                     },
-                    complete: function () { resolve(); },
-                    error: function (err) { reject(err); }
+                    complete: function () { 
+                        console.log('✅ File parsing complete');
+                        resolve(); 
+                    }
                 });
             });
 
