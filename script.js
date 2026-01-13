@@ -399,32 +399,59 @@ async function uploadFile() {
 // IndexedDB Storage 
 // ========================================
 const DB_NAME = 'UIDAI_Analytics_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to force schema update
 const STORE_NAME = 'enrolment_data';
 
 function initDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = (event) => reject('Database error: ' + event.target.error);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            }
+        
+        request.onerror = (event) => {
+            console.error('❌ Database error:', event.target.error);
+            reject('Database error: ' + event.target.error);
         };
-        request.onsuccess = (event) => resolve(event.target.result);
+        
+        request.onupgradeneeded = (event) => {
+            console.log('📦 Creating/upgrading database...');
+            const db = event.target.result;
+            // Delete old store if exists and recreate
+            if (db.objectStoreNames.contains(STORE_NAME)) {
+                db.deleteObjectStore(STORE_NAME);
+            }
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            console.log('✅ Object store created');
+        };
+        
+        request.onsuccess = (event) => {
+            console.log('✅ Database opened successfully');
+            resolve(event.target.result);
+        };
     });
 }
 
 async function storeDataInDB(data) {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const putRequest = store.put({ id: 'current_dataset', data: data });
-        putRequest.onsuccess = () => { db.close(); resolve(); };
-        putRequest.onerror = (e) => { db.close(); reject(e.target.error); };
-    });
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const putRequest = store.put({ id: 'current_dataset', data: data });
+            
+            putRequest.onsuccess = () => { 
+                console.log('💾 Data stored successfully');
+                db.close(); 
+                resolve(); 
+            };
+            putRequest.onerror = (e) => { 
+                console.error('❌ Store error:', e.target.error);
+                db.close(); 
+                reject(e.target.error); 
+            };
+        });
+    } catch (err) {
+        console.error('❌ storeDataInDB error:', err);
+        throw err;
+    }
 }
 
 // ========================================
