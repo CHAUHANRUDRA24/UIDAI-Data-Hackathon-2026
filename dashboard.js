@@ -250,6 +250,68 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
             options: commonOptions
         });
     }
+
+    const ctxType = document.getElementById('updateTypeChart');
+    if (ctxType) {
+        // Simulate Demographic vs Biometric based on totalUpdates
+        const demographic = Math.round(totalUpdates * 0.65);
+        const biometric = totalUpdates - demographic;
+        
+        new Chart(ctxType, {
+            type: 'doughnut',
+            data: {
+                labels: ['Demographic', 'Biometric'],
+                datasets: [{
+                    data: [demographic, biometric],
+                    backgroundColor: ['#f59e0b', '#8b5cf6'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...commonOptions,
+                cutout: '70%',
+                plugins: {
+                    ...commonOptions.plugins,
+                    legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                }
+            }
+        });
+    }
+
+    // Attach Event Listeners
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.onclick = () => {
+            const element = document.querySelector('.app-container');
+            const opt = {
+                margin: 0.5,
+                filename: 'UIDAI_Analytics_Dashboard.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            if (window.html2pdf) {
+                exportBtn.textContent = 'Generating...';
+                window.html2pdf().set(opt).from(element).save().then(() => {
+                    exportBtn.innerHTML = 'Export PDF'; 
+                    alert('PDF Downloaded!');
+                });
+            } else {
+                alert('PDF library not loaded.');
+            }
+        };
+    }
+
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) {
+        shareBtn.onclick = () => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const originalText = shareBtn.innerHTML;
+                shareBtn.innerHTML = `✓ Copied`;
+                setTimeout(() => { shareBtn.innerHTML = originalText; }, 2000);
+            });
+        };
+    }
 }
 
 // ========================================
@@ -365,7 +427,6 @@ function generateCustomAlgorithms(data, ageCols) {
     const container = document.getElementById('customAlgorithmsContainer');
     if (!container || !data || data.length === 0) return;
 
-    // Safety check for ageCols
     if (!ageCols || ageCols.length === 0) {
         console.warn('No age columns found for custom algorithms.');
         container.innerHTML = '<div class="algo-item"><p style="text-align:center; color:#64748b; padding: 1rem;">Insufficient data breakdown for AI analysis.</p></div>';
@@ -381,15 +442,13 @@ function generateCustomAlgorithms(data, ageCols) {
             ageCols.forEach(c => ageSums[c] += (row.breakdown[c] || 0));
         }
     });
-    
+
     let maxAge = ageCols[0];
     let maxVal = 0;
     for (let c in ageSums) { if (ageSums[c] > maxVal) { maxVal = ageSums[c]; maxAge = c; } }
     
-    // Fallback if maxAge is somehow still undefined
     if (!maxAge) {
-        container.innerHTML = '<div class="algo-item"><p style="text-align:center; color:#64748b; padding: 1rem;">Data structure incomplete for analysis.</p></div>';
-        return;
+         return;
     }
 
     const dominantPercent = Math.round((maxVal / (total || 1)) * 100);
@@ -433,11 +492,11 @@ function generateCustomAlgorithms(data, ageCols) {
         });
         ageGroupWins[localWin]++;
     });
-    let globalPatternCol = ageCols[0] || '';
+    let globalPatternCol = ageCols[0];
     let maxWins = 0;
     for (let c in ageGroupWins) { if (ageGroupWins[c] > maxWins) { maxWins = ageGroupWins[c]; globalPatternCol = c; } }
-    const patternName = globalPatternCol ? globalPatternCol.replace('age', '').replace(/_/g, ' ') : 'N/A';
-    const consistency = data.length > 0 ? Math.round((maxWins / data.length) * 100) : 0;
+    const patternName = globalPatternCol.replace('age', '').replace(/_/g, ' ');
+    const consistency = Math.round((maxWins / data.length) * 100);
 
     const algos = [
         {

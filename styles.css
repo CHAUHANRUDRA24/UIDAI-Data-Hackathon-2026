@@ -1365,5 +1365,10 @@ body {
     .results-actions { flex-direction: column; }
     .results-actions .btn { width: 100%; }
     .validation-actions { flex-direction: column; }
-
 }
+}
+
+/* Fix for Giant Icons */
+svg { max-width: 100%; }
+.gov-badge svg { width: 24px; height: 24px; }
+
