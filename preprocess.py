@@ -159,7 +159,7 @@ def main():
     files = list(Path('.').glob('*.csv')) + list(Path('.').glob('*.zip'))
     
     if not files:
-        print("\n❌ No CSV or ZIP files found in current directory!")
+        print("\n[X] No CSV or ZIP files found in current directory!")
         print("   Please place your data files here and run again.")
         sys.exit(1)
     
