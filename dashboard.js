@@ -365,30 +365,30 @@ function generateInsights(data, ageCols) {
     const cards = [
         {
             icon: 'Activity',
-            title: 'Biometric Updates & Age',
+            title: 'Biometric Updates & Age / बायोमेट्रिक अपडेट और आयु',
             percent: `${olderPercentage}%`,
-            text: `of enrolments/updates come from users in the ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} age bracket.`,
-            what: `High volume of activity in older age groups.`,
-            why: `Older biometrics (fingerprints/iris) degrade faster, requiring more frequent updates.`,
-            who: `Citizens above 45-50 years.`
+            text: `of enrolments/updates come from users in the ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} age bracket. / ${olderPercentage}% नामांकन/अपडेट ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} आयु वर्ग के हैं।`,
+            what: `High volume of activity in older age groups. / अधिक उम्र के समूहों में उच्च गतिविधि।`,
+            why: `Older biometrics (fingerprints/iris) degrade faster, requiring more frequent updates. / पुरानी बायोमेट्रिक्स (उंगलियों के निशान/परितारिका) तेजी से बदलती हैं, इसलिए अपडेट जरूरी है।`,
+            who: `Citizens above 45-50 years. / 45-50 वर्ष से अधिक के नागरिक।`
         },
         {
             icon: 'Map',
-            title: 'Regional Dominance',
+            title: 'Regional Dominance / क्षेत्रीय प्रभुत्व',
             percent: `${topStatePercent}%`,
-            text: `of the total national enrolment volume is concentrated in ${topState.state}.`,
-            what: `Significant centralization of data processing in ${topState.state}.`,
-            why: `Indicates high population density or successful saturation campaigns in this region.`,
-            who: `Administrators in ${topState.state}.`
+            text: `of the total national enrolment volume is concentrated in ${topState.state}. / कुल राष्ट्रीय नामांकन का ${topStatePercent}% ${topState.state} में है।`,
+            what: `Significant centralization of data processing in ${topState.state}. / ${topState.state} में डेटा प्रोसेसिंग का महत्वपूर्ण केंद्रीकरण।`,
+            why: `Indicates high population density or successful saturation campaigns in this region. / यह उच्च जनसंख्या घनत्व या सफल अभियानों को दर्शाता है।`,
+            who: `Administrators in ${topState.state}. / ${topState.state} के प्रशासक।`
         },
         {
             icon: 'AlertTriangle',
-            title: 'Intervention Required',
+            title: 'Intervention Required / हस्तक्षेप आवश्यक',
             percent: 'Low',
-            text: `enrolment numbers observed in ${bottomStates}.`,
-            what: `Lagging enrolment rates in specific territories.`,
-            why: `May indicate accessibility issues, network gaps, or lack of awareness.`,
-            who: `Regional officers in ${bottomStates}.`
+            text: `enrolment numbers observed in ${bottomStates}. / ${bottomStates} में कम नामांकन देखे गए।`,
+            what: `Lagging enrolment rates in specific territories. / विशिष्ट क्षेत्रों में पिछड़ी नामांकन दरें।`,
+            why: `May indicate accessibility issues, network gaps, or lack of awareness. / यह नेटवर्क अंतराल या जागरूकता की कमी हो सकती है।`,
+            who: `Regional officers in ${bottomStates}. / ${bottomStates} के क्षेत्रीय अधिकारी।`
         }
     ];
 
