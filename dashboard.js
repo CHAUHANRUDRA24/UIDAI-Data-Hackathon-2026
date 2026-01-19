@@ -14,6 +14,14 @@ function initDB() {
         request.onblocked = () => {
             console.warn('Database blocked. Closing other connections...');
         };
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            // Create object store if it doesn't exist
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                console.log('Object store created:', STORE_NAME);
+            }
+        };
     });
 }
 
@@ -267,15 +275,22 @@ function toggleAccordion(headerElement) {
 
 function generateInsights(data, ageCols) {
     const container = document.getElementById('insightsContainer');
-    if (!container || data.length === 0) return;
+    if (!container || !data || data.length === 0) return;
+
+    if (!ageCols || ageCols.length === 0) {
+         container.innerHTML = '<p class="text-muted" style="text-align:center; padding:1rem;">Insights require age-wise breakdown data.</p>';
+         return;
+    }
 
     const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
     let ageSums = {};
     ageCols.forEach(col => ageSums[col] = 0);
     data.forEach(row => {
-        ageCols.forEach(col => {
-            ageSums[col] += row.breakdown[col];
-        });
+        if (row.breakdown) {
+            ageCols.forEach(col => {
+                ageSums[col] += (row.breakdown[col] || 0);
+            });
+        }
     });
 
     const olderCols = ageCols.slice(-2);
@@ -348,17 +363,36 @@ function generateInsights(data, ageCols) {
 
 function generateCustomAlgorithms(data, ageCols) {
     const container = document.getElementById('customAlgorithmsContainer');
-    if (!container || data.length === 0) return;
+    if (!container || !data || data.length === 0) return;
+
+    // Safety check for ageCols
+    if (!ageCols || ageCols.length === 0) {
+        console.warn('No age columns found for custom algorithms.');
+        container.innerHTML = '<div class="algo-item"><p style="text-align:center; color:#64748b; padding: 1rem;">Insufficient data breakdown for AI analysis.</p></div>';
+        return;
+    }
 
     const total = data.reduce((s, i) => s + i.total, 0);
     // Imbalance
     let ageSums = {};
     ageCols.forEach(col => ageSums[col] = 0);
-    data.forEach(row => ageCols.forEach(c => ageSums[c] += row.breakdown[c]));
+    data.forEach(row => {
+        if (row.breakdown) {
+            ageCols.forEach(c => ageSums[c] += (row.breakdown[c] || 0));
+        }
+    });
+    
     let maxAge = ageCols[0];
     let maxVal = 0;
     for (let c in ageSums) { if (ageSums[c] > maxVal) { maxVal = ageSums[c]; maxAge = c; } }
-    const dominantPercent = Math.round((maxVal / total) * 100);
+    
+    // Fallback if maxAge is somehow still undefined
+    if (!maxAge) {
+        container.innerHTML = '<div class="algo-item"><p style="text-align:center; color:#64748b; padding: 1rem;">Data structure incomplete for analysis.</p></div>';
+        return;
+    }
+
+    const dominantPercent = Math.round((maxVal / (total || 1)) * 100);
     const dominantName = maxAge.replace('age', '').replace(/_/g, ' ');
 
     // Spike
@@ -399,11 +433,11 @@ function generateCustomAlgorithms(data, ageCols) {
         });
         ageGroupWins[localWin]++;
     });
-    let globalPatternCol = ageCols[0];
+    let globalPatternCol = ageCols[0] || '';
     let maxWins = 0;
     for (let c in ageGroupWins) { if (ageGroupWins[c] > maxWins) { maxWins = ageGroupWins[c]; globalPatternCol = c; } }
-    const patternName = globalPatternCol.replace('age', '').replace(/_/g, ' ');
-    const consistency = Math.round((maxWins / data.length) * 100);
+    const patternName = globalPatternCol ? globalPatternCol.replace('age', '').replace(/_/g, ' ') : 'N/A';
+    const consistency = data.length > 0 ? Math.round((maxWins / data.length) * 100) : 0;
 
     const algos = [
         {
