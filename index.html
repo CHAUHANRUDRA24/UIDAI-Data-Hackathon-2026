@@ -1,167 +1,285 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="UIDAI Data Analytics Platform - Secure dataset validation and preliminary analytics">
-    <title>UIDAI Data Analytics Platform</title>
+    <meta name="description" content="UIDAI Analytics Dashboard - Enrolment Insights">
+    <title>Dashboard | UIDAI Analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
+
 <body>
-    <main id="app">
-        <!-- SCREEN 1: FILE UPLOAD -->
-        <section id="screen-upload" class="screen screen-upload active">
-            <div class="upload-container">
-                <div class="upload-header">
-                    <div class="gov-badge">
-                        <svg class="gov-emblem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    <div class="app-container">
+
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header (Top Bar) -->
+            <header class="top-header">
+                <div>
+                    <h1 class="page-title">Enrolment Analytics / नामांकन विश्लेषण</h1>
+                    <p class="page-subtitle">Regional distribution and age-wise breakdown / क्षेत्रीय वितरण और आयु-वार विश्लेषण</p>
+                </div>
+                <div class="header-actions">
+                    <button class="action-btn" id="shareBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                         </svg>
-                        <span>UIDAI Data Analytics</span>
-                    </div>
-                    <h1 class="upload-title">Upload Dataset</h1>
-                    <p class="upload-subtitle">Upload Aadhaar-related CSV files or a ZIP archive containing multiple CSVs.</p>
+                        Share / शेयर
+                    </button>
+                    <button class="action-btn" id="exportBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        Export PDF / पीडीएफ निर्यात
+                    </button>
+                    <a href="#" id="uploadLink" class="primary-btn blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Upload New / नया अपलोड
+                    </a>
+                    <!-- Hidden file input for dashboard upload -->
+                    <input type="file" id="dashboardFileUpload" accept=".csv,.zip" hidden>
                 </div>
-                <div class="dropzone" id="dropzone">
-                    <div class="dropzone-content">
-                        <div class="dropzone-icon">
-                            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="8" y="6" width="24" height="32" rx="2"/><rect x="16" y="10" width="24" height="32" rx="2"/><path d="M22 26v8M18 30h8"/>
-                            </svg>
+            </header>
+
+            <!-- Loading System -->
+            <div id="loadingState" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Analyzing datasets... / डेटासेट का विश्लेषण...</p>
+            </div>
+
+            <!-- Dashboard Content (Accordion Style) -->
+            <div id="dashboardContent" class="dashboard-accordion">
+
+                <!-- Section 1: Snapshot (Expanded by default) -->
+                <div class="accordion-item active">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <div class="accordion-title-group">
+                            <span class="accordion-icon blue">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7" />
+                                    <rect x="14" y="3" width="7" height="7" />
+                                    <rect x="14" y="14" width="7" height="7" />
+                                    <rect x="3" y="14" width="7" height="7" />
+                                </svg>
+                            </span>
+                            <h3>Current Snapshot: High-Level Indicators / वर्तमान स्नैपशॉट: उच्च-स्तरीय संकेतक</h3>
                         </div>
-                        <p class="dropzone-text">Drag & drop CSV or ZIP file here</p>
-                        <p class="dropzone-subtext">or click to browse</p>
-                        <input type="file" id="file-input" accept=".csv,.zip" hidden>
-                    </div>
-                    <div class="dropzone-hints">
-                        <span class="hint">Supported formats: .csv, .zip</span>
-                        <span class="hint">ZIP must contain only CSV files</span>
-                    </div>
-                </div>
-                <div class="file-preview" id="file-preview" hidden>
-                    <div class="file-info">
-                        <div class="file-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                        <span class="accordion-chevron">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
                             </svg>
-                        </div>
-                        <div class="file-details">
-                            <span class="file-name" id="file-name">filename.csv</span>
-                            <div class="file-meta">
-                                <span class="file-badge" id="file-badge">CSV</span>
-                                <span class="file-size" id="file-size">2.4 MB</span>
+                        </span>
+                    </div>
+
+                    <div class="accordion-body">
+                        <div class="snapshot-grid">
+                            <!-- Card 1 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Total Enrolments / कुल नामांकन</span>
+                                    <span class="trend-badge positive">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                            <polyline points="17 6 23 6 23 12" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div class="card-value" id="totalEnrolments">-</div>
+                                <div class="card-subtext positive">
+                                    ↑ 2.4% <span class="text-muted">vs last period</span>
+                                </div>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">MoM Growth / मासिक वृद्धि</span>
+                                    <span class="trend-badge neutral">~</span>
+                                </div>
+                                <div class="card-value" id="momGrowthVal">+2.4%</div>
+                                <div class="card-subtext text-muted">
+                                    Steady upward trend observed in rural sectors.
+                                </div>
+                            </div>
+
+                            <!-- Card 3 -->
+                            <div class="clean-card highlight-border">
+                                <div class="card-top">
+                                    <span class="card-label">Total Updates / कुल अपडेट</span>
+                                    <span class="trend-badge warning">!</span>
+                                </div>
+                                <div class="card-value" id="totalUpdates">-</div>
+                                <div class="card-subtext error">
+                                    High Backlog detected
+                                </div>
+                            </div>
+
+                            <!-- Card 4 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Enrolment/Update Ratio / नामांकन/अपडेट अनुपात</span>
+                                    <span class="trend-badge neutral">●</span>
+                                </div>
+                                <div class="card-value" id="ratioVal">1:3.6</div>
+                                <div class="card-subtext text-muted">
+                                    Updates significantly outpace new enrolments.
+                                </div>
+                            </div>
+
+                            <!-- Card 5 -->
+                            <div class="clean-card">
+                                <div class="card-top">
+                                    <span class="card-label">Most Active Region / सबसे सक्रिय क्षेत्र</span>
+                                    <span class="trend-badge blue">📍</span>
+                                </div>
+                                <div class="card-value sm" id="topState">-</div>
+                                <div class="tag-pill blue">High Volume / उच्च मात्रा</div>
                             </div>
                         </div>
-                        <button class="file-remove" id="file-remove" aria-label="Remove file">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <button class="btn btn-primary" id="btn-upload" disabled>Upload & Validate</button>
-                <div class="security-note">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <span>Files are processed securely and used only for analytics.</span>
-                </div>
-            </div>
-        </section>
 
-        <!-- SCREEN 2: BACKEND PROCESSING -->
-        <section id="screen-processing" class="screen screen-processing">
-            <div class="processing-container">
-                <div class="processing-header">
-                    <h2>Processing Your Data</h2>
-                    <p class="processing-status" id="processing-status">Preparing upload...</p>
-                </div>
-                <div class="progress-steps" id="progress-steps">
-                    <div class="progress-step" data-step="upload"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">1</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Uploading file</span></div></div>
-                    <div class="progress-step" data-step="extract"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">2</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Extracting CSVs</span></div></div>
-                    <div class="progress-step" data-step="read"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">3</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Reading data</span></div></div>
-                    <div class="progress-step" data-step="detect"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">4</span></div></div><div class="step-content"><span class="step-label">Detecting columns</span></div></div>
-                </div>
-            </div>
-        </section>
+                        <!-- Injected Insights (User Feature) -->
+                        <div id="insightsContainer" class="insights-grid" style="margin-top: 1.5rem;"></div>
 
-        <!-- SCREEN 3: COLUMN DETECTION -->
-        <section id="screen-validation" class="screen screen-validation">
-            <div class="validation-container">
-                <div class="validation-header"><h2>Schema Validation</h2><p>Review detected columns and confirm field mappings before proceeding.</p></div>
-                <div class="validation-content">
-                    <div class="panel panel-left"><div class="panel-header"><h3>Detected Files & Columns</h3></div><div class="datasets-list" id="datasets-list"></div></div>
-                    <div class="panel panel-right">
-                        <div class="panel-header"><h3>Confirm Column Mapping</h3><p class="panel-instruction">Map detected columns to required analytical fields.</p></div>
-                        <div class="mapping-form" id="mapping-form">
-                            <div class="mapping-field"><label class="mapping-label"><span class="label-text">Date</span><span class="label-required">Required</span></label><select class="mapping-select" id="map-date" data-field="date"><option value="">Select column...</option></select><span class="mapping-error" id="error-date"></span></div>
-                            <div class="mapping-field"><label class="mapping-label"><span class="label-text">State</span><span class="label-required">Required</span></label><select class="mapping-select" id="map-state" data-field="state"><option value="">Select column...</option></select><span class="mapping-error" id="error-state"></span></div>
-                            <div class="mapping-field"><label class="mapping-label"><span class="label-text">District</span><span class="label-required">Required</span></label><select class="mapping-select" id="map-district" data-field="district"><option value="">Select column...</option></select><span class="mapping-error" id="error-district"></span></div>
-                            <div class="mapping-field"><label class="mapping-label"><span class="label-text">Age Group</span><span class="label-optional">Optional</span></label><select class="mapping-select" id="map-age" data-field="age"><option value="">Select column...</option></select></div>
-                            <div class="mapping-field"><label class="mapping-label"><span class="label-text">Count / Value</span><span class="label-required">Required</span></label><select class="mapping-select" id="map-count" data-field="count"><option value="">Select column...</option></select><span class="mapping-error" id="error-count"></span></div>
-                        </div>
-                        <div class="validation-summary" id="validation-summary">
-                            <div class="summary-item summary-success" id="summary-mapped" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Required fields mapped</span></div>
-                            <div class="summary-item summary-warning" id="summary-warnings" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span id="warning-text">Warnings present</span></div>
-                            <div class="summary-item summary-error" id="summary-errors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span id="error-text">4 required fields unmapped</span></div>
-                        </div>
-                        <div class="validation-actions">
-                            <button class="btn btn-secondary" id="btn-reupload">Re-upload Files</button>
-                            <button class="btn btn-primary" id="btn-confirm" disabled>Confirm & Run Analysis</button>
+                        <div class="accordion-footer">
+                            <a href="#" class="link-btn">View Detailed Report → / विस्तृत रिपोर्ट देखें →</a>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- SCREEN 4: ANALYSIS PROCESSING -->
-        <section id="screen-analysis" class="screen screen-analysis">
-            <div class="analysis-container">
-                <div class="analysis-header"><h2>Running Analysis</h2><p>Running initial analytics. This may take a few moments.</p></div>
-                <div class="analysis-steps" id="analysis-steps">
-                    <div class="analysis-step" data-step="aggregate"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">1</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Aggregating data</span></div></div>
-                    <div class="analysis-step" data-step="trends"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">2</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Computing trends</span></div></div>
-                    <div class="analysis-step" data-step="deviations"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">3</span></div><div class="step-line"></div></div><div class="step-content"><span class="step-label">Identifying deviations</span></div></div>
-                    <div class="analysis-step" data-step="visuals"><div class="step-indicator"><div class="step-circle"><svg class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg><span class="step-number">4</span></div></div><div class="step-content"><span class="step-label">Generating visual summaries</span></div></div>
+            </div>
+
+            <!-- Section 2: Trends That Matter (User's Workspace) -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <div class="accordion-title-group">
+                        <span class="accordion-icon blue"> #2 </span>
+                        <h3>Second Layer: Trends That Matter / दूसरा स्तर: रुझान जो मायने रखते हैं</h3>
+                    </div>
+                    <span class="accordion-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </span>
                 </div>
-            </div>
-        </section>
+                <div class="accordion-body hidden-charts-area">
+                    <!-- All 4 Charts Required by User -->
+                    <div class="charts-grid-2">
+                        <!-- Chart 1: Enrolment Trends -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Enrolment Growth / नामांकन वृद्धि</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="enrolmentTrendChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Enrolment activity peaks between March-May every year.
+                                </p>
+                            </div>
+                        </div>
 
-        <!-- SCREEN 5: ANALYTICS PREVIEW -->
-        <section id="screen-results" class="screen screen-results">
-            <div class="results-container">
-                <div class="results-header"><h2>Preliminary Analytics Preview</h2><p>High-level overview of processed data. Generate full report for detailed analysis.</p></div>
-                <div class="metrics-section">
-                    <h3 class="section-title">Overview Metrics</h3>
-                    <div class="metrics-grid">
-                        <div class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="metric-content"><span class="metric-value" id="metric-records">--</span><span class="metric-label">Total Records Processed</span></div></div>
-                        <div class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="metric-content"><span class="metric-value" id="metric-daterange">--</span><span class="metric-label">Date Range Covered</span></div></div>
-                        <div class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div class="metric-content"><span class="metric-value" id="metric-states">--</span><span class="metric-label">Geographic Coverage</span></div></div>
+                        <!-- Chart 2: Update Trends -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Updates Over Time / समय के साथ अपडेट</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="updatesTrendChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Biometric updates show a steady 15% increase.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Region-wise Activity -->
+                        <div class="chart-card wide">
+                            <div class="chart-header">
+                                <h3>Region-wise Activity / क्षेत्र-वार गतिविधि</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="regionBarChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Northern states contribute 45% of total document
+                                    updates.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart 4: Demographic vs Biometric -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Update Distribution / अपडेट वितरण</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="updateTypeChart"></canvas>
+                            </div>
+                            <div class="chart-footer">
+                                <p class="chart-explanation">Demographic changes outweigh biometric updates by 2:1.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="analytics-section">
-                    <h3 class="section-title">Preliminary Analytics</h3>
-                    <div class="charts-grid">
-                        <div class="chart-card"><div class="chart-header"><h4>Time-based Activity Trend</h4><span class="chart-caption">Overall enrolment/update trend over time</span></div><div class="chart-container"><canvas id="chart-timeline"></canvas></div><div class="chart-insight"><strong>What this shows:</strong> Monthly distribution of activities.<br><strong>Why it matters:</strong> Identifies seasonal patterns.</div></div>
-                        <div class="chart-card"><div class="chart-header"><h4>State-wise Distribution</h4><span class="chart-caption">Highest activity regions</span></div><div class="chart-container"><canvas id="chart-states"></canvas></div><div class="chart-insight"><strong>What this shows:</strong> Top 5 states by volume.<br><strong>Why it matters:</strong> Highlights regional concentration.</div></div>
-                        <div class="chart-card"><div class="chart-header"><h4>Age-group Activity Split</h4><span class="chart-caption">Age-based activity comparison</span></div><div class="chart-container"><canvas id="chart-age"></canvas></div><div class="chart-insight"><strong>What this shows:</strong> Distribution across age groups.<br><strong>Why it matters:</strong> Reveals demographic patterns.</div></div>
-                        <div class="chart-card outlier-card"><div class="chart-header"><h4>Outlier Indicators</h4><span class="chart-caption">Anomalies detected</span></div><div class="outlier-list" id="outlier-list"></div><div class="chart-insight"><strong>Why it matters:</strong> May indicate data quality issues.</div></div>
+            </div>
+
+            <!-- Section 3: Custom Algorithms (User Feature) -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <div class="accordion-title-group">
+                        <span class="accordion-icon blue"> #3 </span>
+                        <h3>Third Layer: AI Insights / तीसरा स्तर: एआई अंतर्दृष्टि</h3>
                     </div>
+                    <span class="accordion-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </span>
                 </div>
-                <div class="results-actions">
-                    <button class="btn btn-tertiary" id="btn-new-upload">Upload New Dataset</button>
-                    <button class="btn btn-secondary" id="btn-download">Download Preview Charts</button>
-                    <button class="btn btn-primary" id="btn-full-report">Generate Full Report</button>
+                <div class="accordion-body">
+                    <div id="customAlgorithmsContainer" class="algorithms-grid"></div>
                 </div>
             </div>
-        </section>
+
+    </div>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="script.js"></script>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
 </body>
+
 </html>
