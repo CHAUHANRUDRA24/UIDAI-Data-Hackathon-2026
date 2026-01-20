@@ -11,14 +11,14 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=3">
     <link rel="stylesheet" href="dashboard.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 
-<body>
+<body data-lang="en">
     <div class="app-container">
 
 
@@ -27,10 +27,30 @@
             <!-- Header (Top Bar) -->
             <header class="top-header">
                 <div>
-                    <h1 class="page-title">Enrolment Analytics / नामांकन विश्लेषण</h1>
-                    <p class="page-subtitle">Regional distribution and age-wise breakdown / क्षेत्रीय वितरण और आयु-वार विश्लेषण</p>
+                    <h1 class="page-title"><span class="lang-en">Enrolment Analytics</span><span class="lang-hi">नामांकन
+                            विश्लेषण</span></h1>
+                    <p class="page-subtitle"><span class="lang-en">Regional distribution and age-wise
+                            breakdown</span><span class="lang-hi">क्षेत्रीय वितरण और आयु-वार विश्लेषण</span></p>
                 </div>
                 <div class="header-actions">
+                    <div class="language-switcher">
+                        <div class="lang-wrapper" style="position: relative;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="lang-icon"
+                                style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: #1e293b;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path
+                                    d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                                </path>
+                            </svg>
+                            <select id="langSelect" class="lang-select">
+                                <option value="en">English</option>
+                                <option value="hi">हिंदी (Hindi)</option>
+                            </select>
+                        </div>
+                    </div>
                     <button class="action-btn" id="shareBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -40,7 +60,7 @@
                             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                         </svg>
-                        Share / शेयर
+                        <span class="lang-en">Share</span><span class="lang-hi">शेयर</span>
                     </button>
                     <button class="action-btn" id="exportBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -51,7 +71,7 @@
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        Export PDF / पीडीएफ निर्यात
+                        <span class="lang-en">Export PDF</span><span class="lang-hi">पीडीएफ निर्यात</span>
                     </button>
                     <a href="upload.html" id="uploadLink" class="primary-btn blue">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -59,7 +79,7 @@
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Upload New / नया अपलोड
+                        <span class="lang-en">Upload New</span><span class="lang-hi">नया अपलोड</span>
                     </a>
                 </div>
             </header>
@@ -67,7 +87,8 @@
             <!-- Loading System -->
             <div id="loadingState" class="loading-overlay">
                 <div class="spinner"></div>
-                <p>Analyzing datasets... / डेटासेट का विश्लेषण...</p>
+                <p><span class="lang-en">Analyzing datasets...</span><span class="lang-hi">डेटासेट का विश्लेषण...</span>
+                </p>
             </div>
 
             <!-- Dashboard Content (Accordion Style) -->
@@ -87,7 +108,8 @@
                                     <rect x="3" y="14" width="7" height="7" />
                                 </svg>
                             </span>
-                            <h3>Current Snapshot: High-Level Indicators / वर्तमान स्नैपशॉट: उच्च-स्तरीय संकेतक</h3>
+                            <h3><span class="lang-en">Current Snapshot: High-Level Indicators</span><span
+                                    class="lang-hi">वर्तमान स्नैपशॉट: उच्च-स्तरीय संकेतक</span></h3>
                         </div>
                         <span class="accordion-chevron">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -103,7 +125,8 @@
                             <!-- Card 1 -->
                             <div class="clean-card">
                                 <div class="card-top">
-                                    <span class="card-label">Total Enrolments / कुल नामांकन</span>
+                                    <span class="card-label"><span class="lang-en">Total Enrolments</span><span
+                                            class="lang-hi">कुल नामांकन</span></span>
                                     <span class="trend-badge positive">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -122,7 +145,8 @@
                             <!-- Card 2 -->
                             <div class="clean-card">
                                 <div class="card-top">
-                                    <span class="card-label">MoM Growth / मासिक वृद्धि</span>
+                                    <span class="card-label"><span class="lang-en">MoM Growth</span><span
+                                            class="lang-hi">मासिक वृद्धि</span></span>
                                     <span class="trend-badge neutral">~</span>
                                 </div>
                                 <div class="card-value" id="momGrowthVal">+2.4%</div>
@@ -134,7 +158,8 @@
                             <!-- Card 3 -->
                             <div class="clean-card highlight-border">
                                 <div class="card-top">
-                                    <span class="card-label">Total Updates / कुल अपडेट</span>
+                                    <span class="card-label"><span class="lang-en">Total Updates</span><span
+                                            class="lang-hi">कुल अपडेट</span></span>
                                     <span class="trend-badge warning">!</span>
                                 </div>
                                 <div class="card-value" id="totalUpdates">-</div>
@@ -146,7 +171,8 @@
                             <!-- Card 4 -->
                             <div class="clean-card">
                                 <div class="card-top">
-                                    <span class="card-label">Enrolment/Update Ratio / नामांकन/अपडेट अनुपात</span>
+                                    <span class="card-label"><span class="lang-en">Enrolment/Update Ratio</span><span
+                                            class="lang-hi">नामांकन/अपडेट अनुपात</span></span>
                                     <span class="trend-badge neutral">●</span>
                                 </div>
                                 <div class="card-value" id="ratioVal">1:3.6</div>
@@ -158,11 +184,13 @@
                             <!-- Card 5 -->
                             <div class="clean-card">
                                 <div class="card-top">
-                                    <span class="card-label">Most Active Region / सबसे सक्रिय क्षेत्र</span>
+                                    <span class="card-label"><span class="lang-en">Most Active Region</span><span
+                                            class="lang-hi">सबसे सक्रिय क्षेत्र</span></span>
                                     <span class="trend-badge blue">📍</span>
                                 </div>
                                 <div class="card-value sm" id="topState">-</div>
-                                <div class="tag-pill blue">High Volume / उच्च मात्रा</div>
+                                <div class="tag-pill blue"><span class="lang-en">High Volume</span><span
+                                        class="lang-hi">उच्च मात्रा</span></div>
                             </div>
                         </div>
 
@@ -170,7 +198,8 @@
                         <div id="insightsContainer" class="insights-grid" style="margin-top: 1.5rem;"></div>
 
                         <div class="accordion-footer">
-                            <a href="#" class="link-btn">View Detailed Report → / विस्तृत रिपोर्ट देखें →</a>
+                            <a href="#" class="link-btn"><span class="lang-en">View Detailed Report →</span><span
+                                    class="lang-hi">विस्तृत रिपोर्ट देखें →</span></a>
                         </div>
                     </div>
                 </div>
@@ -182,7 +211,8 @@
                 <div class="accordion-header" onclick="toggleAccordion(this)">
                     <div class="accordion-title-group">
                         <span class="accordion-icon blue"> #2 </span>
-                        <h3>Second Layer: Trends That Matter / दूसरा स्तर: रुझान जो मायने रखते हैं</h3>
+                        <h3><span class="lang-en">Second Layer: Trends That Matter</span><span class="lang-hi">दूसरा
+                                स्तर: रुझान जो मायने रखते हैं</span></h3>
                     </div>
                     <span class="accordion-chevron">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -197,7 +227,8 @@
                         <!-- Chart 1: Enrolment Trends -->
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Enrolment Growth / नामांकन वृद्धि</h3>
+                                <h3><span class="lang-en">Enrolment Growth</span><span class="lang-hi">नामांकन
+                                        वृद्धि</span></h3>
                             </div>
                             <div class="chart-body">
                                 <canvas id="enrolmentTrendChart"></canvas>
@@ -211,7 +242,8 @@
                         <!-- Chart 2: Update Trends -->
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Updates Over Time / समय के साथ अपडेट</h3>
+                                <h3><span class="lang-en">Updates Over Time</span><span class="lang-hi">समय के साथ
+                                        अपडेट</span></h3>
                             </div>
                             <div class="chart-body">
                                 <canvas id="updatesTrendChart"></canvas>
@@ -224,7 +256,8 @@
                         <!-- Chart 3: Region-wise Activity -->
                         <div class="chart-card wide">
                             <div class="chart-header">
-                                <h3>Region-wise Activity / क्षेत्र-वार गतिविधि</h3>
+                                <h3><span class="lang-en">Region-wise Activity</span><span class="lang-hi">क्षेत्र-वार
+                                        गतिविधि</span></h3>
                             </div>
                             <div class="chart-body">
                                 <canvas id="regionBarChart"></canvas>
@@ -238,7 +271,8 @@
                         <!-- Chart 4: Demographic vs Biometric -->
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Update Distribution / अपडेट वितरण</h3>
+                                <h3><span class="lang-en">Update Distribution</span><span class="lang-hi">अपडेट
+                                        वितरण</span></h3>
                             </div>
                             <div class="chart-body">
                                 <canvas id="updateTypeChart"></canvas>
@@ -257,7 +291,8 @@
                 <div class="accordion-header" onclick="toggleAccordion(this)">
                     <div class="accordion-title-group">
                         <span class="accordion-icon blue"> #3 </span>
-                        <h3>Third Layer: AI Insights / तीसरा स्तर: एआई अंतर्दृष्टि</h3>
+                        <h3><span class="lang-en">Third Layer: AI Insights</span><span class="lang-hi">तीसरा स्तर: एआई
+                                अंतर्दृष्टि</span></h3>
                     </div>
                     <span class="accordion-chevron">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

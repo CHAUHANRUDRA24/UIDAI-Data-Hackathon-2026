@@ -98,6 +98,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dashboardContent = document.getElementById('dashboardContent');
     const uploadLink = document.getElementById('uploadLink');
 
+
+
+    // Language Switcher Logic
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect) {
+        // Set initial state
+        const storedLang = localStorage.getItem('appLang') || 'en';
+        document.body.setAttribute('data-lang', storedLang);
+        langSelect.value = storedLang;
+
+        langSelect.addEventListener('change', (e) => {
+            const newLang = e.target.value;
+            document.body.setAttribute('data-lang', newLang);
+            localStorage.setItem('appLang', newLang);
+        });
+    }
+
     // Handle Upload Click - redirect to upload page
     if (uploadLink) {
         uploadLink.addEventListener('click', (e) => {
@@ -117,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const dbData = await getDataFromDB();
             console.log('Raw DB data:', dbData);
-            
+
             // Check if dbData has valid structure with actual data values > 0
             if (dbData && dbData.data && Array.isArray(dbData.data) && dbData.data.length > 0) {
                 // Validate that the data has actual values (not all zeros)
@@ -136,11 +153,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Fallback to hardcoded data if no valid uploaded data
         if (!data || data.length === 0) {
+            // Try enabling processed_data.json fallback
+            try {
+                const response = await fetch('processed_data.json');
+                if (response.ok) {
+                    const json = await response.json();
+                    if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+                        data = json.data;
+                        ageCols = json.metadata?.ageCols || [];
+                        console.log('Loaded data from processed_data.json');
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load processed_data.json', e);
+            }
+        }
+
+        // Final fallback to hardcoded data
+        if (!data || data.length === 0) {
             console.log('Using hardcoded default data');
             data = processedData.data;
             ageCols = processedData.metadata.ageCols || [];
         }
-        
+
         // Identify Age Columns if not defined
         if ((!ageCols || ageCols.length === 0) && data[0] && data[0].breakdown) {
             ageCols = Object.keys(data[0].breakdown);
@@ -187,13 +222,13 @@ async function handleDashboardUpload(file) {
             dynamicTyping: true,
             complete: (results) => {
                 const newData = processUploadedData(results.data);
-                
+
                 // Update Dashboard
                 processedData.data = newData.data;
                 processedData.metadata.ageCols = newData.ageCols;
-                
+
                 renderDashboard(newData.data, newData.ageCols);
-                
+
                 if (loadingState) loadingState.style.display = 'none';
                 alert('Dashboard updated with new data!');
             },
@@ -214,7 +249,7 @@ function processUploadedData(rows) {
     // Attempt to auto-map columns
     // We expect: State, Total, and Age breakdowns
     // Heuristic: Look for 'State', 'District', and columns with 'Year' or 'Age'
-    
+
     // Normalize keys
     if (!rows || rows.length === 0) return { data: [], ageCols: [] };
 
@@ -222,14 +257,16 @@ function processUploadedData(rows) {
     const keys = Object.keys(sample);
 
     const stateKey = keys.find(k => k.toLowerCase().includes('state')) || keys[0]; // fallback
-    
+
     // Identify Age Columns
-    const ageCols = keys.filter(k => 
-        k.toLowerCase().includes('0-5') || 
-        k.toLowerCase().includes('5-18') || 
-        k.toLowerCase().includes('18+') || 
-        k.toLowerCase().includes('year') ||
-        k.toLowerCase().includes('age')
+    const ageCols = keys.filter(k =>
+        (k.toLowerCase().includes('0-5') ||
+            k.toLowerCase().includes('5-18') ||
+            k.toLowerCase().includes('18+') ||
+            k.toLowerCase().includes('year') ||
+            k.toLowerCase().includes('age')) &&
+        !k.toLowerCase().includes('total') && // Exclude Total/Sum columns
+        !k.toLowerCase().includes('sum')
     );
 
     // Group by State
@@ -260,7 +297,7 @@ function processUploadedData(rows) {
         });
     });
 
-    const processed = Object.values(stateMap).sort((a,b) => b.total - a.total);
+    const processed = Object.values(stateMap).sort((a, b) => b.total - a.total);
     return { data: processed, ageCols: ageCols };
 }
 
@@ -271,22 +308,27 @@ function renderDashboard(data, ageCols) {
     // Estimate Updates vs Enrolments
     let estUpdates = 0;
     let estNewEnrolments = 0;
-    
+
     // Simple Heuristic for updates vs enrolments if not explicitly defined
     // Assuming younger ages are new enrolments, older are updates
     data.forEach(d => {
-            if (d.breakdown) {
-                for(let key in d.breakdown) {
-                    const val = d.breakdown[key] || 0;
-                    if (key.includes('0-5') || key.includes('5-18')) {
-                        estNewEnrolments += val;
-                    } else {
-                        estUpdates += val;
-                    }
+        if (d.breakdown) {
+            for (let key in d.breakdown) {
+                // SKIP SUMMARY/TOTAL COLUMNS in breakdown summation
+                if (key.toLowerCase().includes('total') || key.toLowerCase().includes('sum') || key.toLowerCase().includes('all ages')) {
+                    continue;
+                }
+
+                const val = d.breakdown[key] || 0;
+                if (key.includes('0-5') || key.includes('5-18') || key.toLowerCase().includes('child') || key.includes('<18')) {
+                    estNewEnrolments += val;
+                } else {
+                    estUpdates += val;
                 }
             }
+        }
     });
-    
+
     if (estUpdates === 0 && estNewEnrolments === 0) {
         estUpdates = Math.round(totalEnrolment * 0.35);
         estNewEnrolments = totalEnrolment - estUpdates;
@@ -303,7 +345,7 @@ function renderDashboard(data, ageCols) {
     if (ratioEl) ratioEl.textContent = `1:${ratio}`;
     const momEl = document.getElementById('momGrowthVal');
     if (momEl) momEl.textContent = `+${growth}%`;
-    
+
     if (data.length > 0) {
         document.getElementById('topState').textContent = data[0].state;
     }
@@ -410,7 +452,7 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
         // Simulate Demographic vs Biometric based on totalUpdates
         const demographic = Math.round(totalUpdates * 0.65);
         const biometric = totalUpdates - demographic;
-        
+
         new Chart(ctxType, {
             type: 'doughnut',
             data: {
@@ -447,7 +489,7 @@ function initializeCharts(data, totalEnrolment, totalUpdates) {
             if (window.html2pdf) {
                 exportBtn.textContent = 'Generating...';
                 window.html2pdf().set(opt).from(element).save().then(() => {
-                    exportBtn.innerHTML = 'Export PDF'; 
+                    exportBtn.innerHTML = 'Export PDF';
                     alert('PDF Downloaded!');
                 });
             } else {
@@ -494,8 +536,8 @@ function generateInsights(data, ageCols) {
     if (!container || !data || data.length === 0) return;
 
     if (!ageCols || ageCols.length === 0) {
-         container.innerHTML = '<p class="text-muted" style="text-align:center; padding:1rem;">Insights require age-wise breakdown data.</p>';
-         return;
+        container.innerHTML = '<p class="text-muted" style="text-align:center; padding:1rem;">Insights require age-wise breakdown data.</p>';
+        return;
     }
 
     const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
@@ -519,30 +561,30 @@ function generateInsights(data, ageCols) {
     const cards = [
         {
             icon: 'Activity',
-            title: 'Biometric Updates & Age / बायोमेट्रिक अपडेट और आयु',
+            title: '<span class="lang-en">Biometric Updates & Age</span><span class="lang-hi">बायोमेट्रिक अपडेट और आयु</span>',
             percent: `${olderPercentage}%`,
-            text: `of enrolments/updates come from users in the ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} age bracket. / ${olderPercentage}% नामांकन/अपडेट ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} आयु वर्ग के हैं।`,
-            what: `High volume of activity in older age groups. / अधिक उम्र के समूहों में उच्च गतिविधि।`,
-            why: `Older biometrics (fingerprints/iris) degrade faster, requiring more frequent updates. / पुरानी बायोमेट्रिक्स (उंगलियों के निशान/परितारिका) तेजी से बदलती हैं, इसलिए अपडेट जरूरी है।`,
-            who: `Citizens above 45-50 years. / 45-50 वर्ष से अधिक के नागरिक।`
+            text: `<span class="lang-en">of enrolments/updates come from users in the ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} age bracket.</span><span class="lang-hi">${olderPercentage}% नामांकन/अपडेट ${olderCols.map(c => c.replace('age', '').replace(/_/g, ' ')).join(' & ')} आयु वर्ग के हैं।</span>`,
+            what: `<span class="lang-en">High volume of activity in older age groups.</span><span class="lang-hi">अधिक उम्र के समूहों में उच्च गतिविधि।</span>`,
+            why: `<span class="lang-en">Older biometrics (fingerprints/iris) degrade faster, requiring more frequent updates.</span><span class="lang-hi">पुरानी बायोमेट्रिक्स (उंगलियों के निशान/परितारिका) तेजी से बदलती हैं, इसलिए अपडेट जरूरी है।</span>`,
+            who: `<span class="lang-en">Citizens above 45-50 years.</span><span class="lang-hi">45-50 वर्ष से अधिक के नागरिक।</span>`
         },
         {
             icon: 'Map',
-            title: 'Regional Dominance / क्षेत्रीय प्रभुत्व',
+            title: '<span class="lang-en">Regional Dominance</span><span class="lang-hi">क्षेत्रीय प्रभुत्व</span>',
             percent: `${topStatePercent}%`,
-            text: `of the total national enrolment volume is concentrated in ${topState.state}. / कुल राष्ट्रीय नामांकन का ${topStatePercent}% ${topState.state} में है।`,
-            what: `Significant centralization of data processing in ${topState.state}. / ${topState.state} में डेटा प्रोसेसिंग का महत्वपूर्ण केंद्रीकरण।`,
-            why: `Indicates high population density or successful saturation campaigns in this region. / यह उच्च जनसंख्या घनत्व या सफल अभियानों को दर्शाता है।`,
-            who: `Administrators in ${topState.state}. / ${topState.state} के प्रशासक।`
+            text: `<span class="lang-en">of the total national enrolment volume is concentrated in ${topState.state}.</span><span class="lang-hi">कुल राष्ट्रीय नामांकन का ${topStatePercent}% ${topState.state} में है।</span>`,
+            what: `<span class="lang-en">Significant centralization of data processing in ${topState.state}.</span><span class="lang-hi">${topState.state} में डेटा प्रोसेसिंग का महत्वपूर्ण केंद्रीकरण।</span>`,
+            why: `<span class="lang-en">Indicates high population density or successful saturation campaigns in this region.</span><span class="lang-hi">यह उच्च जनसंख्या घनत्व या सफल अभियानों को दर्शाता है।</span>`,
+            who: `<span class="lang-en">Administrators in ${topState.state}.</span><span class="lang-hi">${topState.state} के प्रशासक।</span>`
         },
         {
             icon: 'AlertTriangle',
-            title: 'Intervention Required / हस्तक्षेप आवश्यक',
+            title: '<span class="lang-en">Intervention Required</span><span class="lang-hi">हस्तक्षेप आवश्यक</span>',
             percent: 'Low',
-            text: `enrolment numbers observed in ${bottomStates}. / ${bottomStates} में कम नामांकन देखे गए।`,
-            what: `Lagging enrolment rates in specific territories. / विशिष्ट क्षेत्रों में पिछड़ी नामांकन दरें।`,
-            why: `May indicate accessibility issues, network gaps, or lack of awareness. / यह नेटवर्क अंतराल या जागरूकता की कमी हो सकती है।`,
-            who: `Regional officers in ${bottomStates}. / ${bottomStates} के क्षेत्रीय अधिकारी।`
+            text: `<span class="lang-en">enrolment numbers observed in ${bottomStates}.</span><span class="lang-hi">${bottomStates} में कम नामांकन देखे गए।</span>`,
+            what: `<span class="lang-en">Lagging enrolment rates in specific territories.</span><span class="lang-hi">विशिष्ट क्षेत्रों में पिछड़ी नामांकन दरें।</span>`,
+            why: `<span class="lang-en">May indicate accessibility issues, network gaps, or lack of awareness.</span><span class="lang-hi">यह नेटवर्क अंतराल या जागरूकता की कमी हो सकती है।</span>`,
+            who: `<span class="lang-en">Regional officers in ${bottomStates}.</span><span class="lang-hi">${bottomStates} के क्षेत्रीय अधिकारी।</span>`
         }
     ];
 
@@ -600,9 +642,9 @@ function generateCustomAlgorithms(data, ageCols) {
     let maxAge = ageCols[0];
     let maxVal = 0;
     for (let c in ageSums) { if (ageSums[c] > maxVal) { maxVal = ageSums[c]; maxAge = c; } }
-    
+
     if (!maxAge) {
-         return;
+        return;
     }
 
     const dominantPercent = Math.round((maxVal / (total || 1)) * 100);
