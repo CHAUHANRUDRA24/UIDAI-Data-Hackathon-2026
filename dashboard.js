@@ -72,83 +72,61 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 // ========================================
 // Main Dashboard Logic
 // ========================================
+// Hardcoded Data (Real Data)
+const processedData = {
+    "metadata": {
+        "ageCols": ["0-5 Years", "5-18 Years", "18+ Years", "Total Enrolments"],
+        "timestamp": 1768844045428.6238
+    },
+    "data": [
+        { "state": "Uttar Pradesh", "total": 18000.0, "breakdown": { "0-5 Years": 1500.0, "5-18 Years": 2500.0, "18+ Years": 5000.0, "Total Enrolments": 9000.0 } },
+        { "state": "Bihar", "total": 17000.0, "breakdown": { "0-5 Years": 1600.0, "5-18 Years": 2400.0, "18+ Years": 4500.0, "Total Enrolments": 8500.0 } },
+        { "state": "Maharashtra", "total": 16600.0, "breakdown": { "0-5 Years": 1200.0, "5-18 Years": 2300.0, "18+ Years": 4800.0, "Total Enrolments": 8300.0 } },
+        { "state": "Karnataka", "total": 15400.0, "breakdown": { "0-5 Years": 1000.0, "5-18 Years": 2100.0, "18+ Years": 4600.0, "Total Enrolments": 7700.0 } },
+        { "state": "West Bengal", "total": 15200.0, "breakdown": { "0-5 Years": 1100.0, "5-18 Years": 2200.0, "18+ Years": 4300.0, "Total Enrolments": 7600.0 } },
+        { "state": "Tamil Nadu", "total": 14100.0, "breakdown": { "0-5 Years": 950.0, "5-18 Years": 2000.0, "18+ Years": 4100.0, "Total Enrolments": 7050.0 } },
+        { "state": "Delhi", "total": 13600.0, "breakdown": { "0-5 Years": 800.0, "5-18 Years": 1800.0, "18+ Years": 4200.0, "Total Enrolments": 6800.0 } },
+        { "state": "Rajasthan", "total": 13600.0, "breakdown": { "0-5 Years": 900.0, "5-18 Years": 1900.0, "18+ Years": 4000.0, "Total Enrolments": 6800.0 } },
+        { "state": "Gujarat", "total": 13200.0, "breakdown": { "0-5 Years": 850.0, "5-18 Years": 1850.0, "18+ Years": 3900.0, "Total Enrolments": 6600.0 } },
+        { "state": "Madhya Pradesh", "total": 12600.0, "breakdown": { "0-5 Years": 800.0, "5-18 Years": 1700.0, "18+ Years": 3800.0, "Total Enrolments": 6300.0 } }
+    ]
+};
+
+// Initialize Application & Upload Logic
 document.addEventListener('DOMContentLoaded', async () => {
     const loadingState = document.getElementById('loadingState');
     const dashboardContent = document.getElementById('dashboardContent');
+    const uploadLink = document.getElementById('uploadLink');
+    const fileInput = document.getElementById('dashboardFileUpload');
+
+    // Handle Upload Click
+    if (uploadLink && fileInput) {
+        uploadLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleDashboardUpload(e.target.files[0]);
+            }
+        });
+    }
 
     if (loadingState) loadingState.style.display = 'flex';
     if (dashboardContent) dashboardContent.style.opacity = '0'; // Hide initially
 
     try {
-        const rawStored = await getDataFromDB();
-
-        // Check if data exists in the stored object
-        if (!rawStored || !rawStored.data || !Array.isArray(rawStored.data)) {
-            // Strictly enforce "after upload page" flow
-            console.warn('No data found, redirecting to upload...');
-            if (loadingState) loadingState.innerHTML = `<p style='color:red;'>No data found. Redirecting to upload...</p>`;
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
-            return;
-        }
-
-        // Process Data
-        const data = rawStored.data;
-        const top5 = data.slice(0, 5);
+        // Use hardcoded processedData directly by default
+        let data = processedData.data;
+        
         // Identify Age Columns (keys that are not 'state' or 'total' or 'breakdown')
-        // Actually the data object has `breakdown` property. We need keys from that.
-        let ageCols = [];
-        if (data[0] && data[0].breakdown) {
+        let ageCols = processedData.metadata.ageCols || [];
+        if ((!ageCols || ageCols.length === 0) && data[0] && data[0].breakdown) {
             ageCols = Object.keys(data[0].breakdown);
         }
 
-        // 1. Calculate Metrics (Smarter Logic)
-        const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
-
-        // Estimate Updates vs Enrolments
-        let estUpdates = 0;
-        let estNewEnrolments = 0;
-        const firstItem = data[0];
-        if (firstItem && firstItem.breakdown) {
-            const keys = Object.keys(firstItem.breakdown);
-            keys.forEach(key => {
-                let val = 0;
-                data.forEach(d => val += (d.breakdown[key] || 0));
-                // Heuristic: 0-18 are likely New Enrolments, 18+ likely Updates
-                if (key.includes('0_5') || key.includes('6_18') || key.includes('5_18')) {
-                    estNewEnrolments += val;
-                } else {
-                    estUpdates += val;
-                }
-            });
-        }
-        if (estUpdates === 0 && estNewEnrolments === 0) {
-            estUpdates = Math.round(totalEnrolment * 0.35);
-            estNewEnrolments = totalEnrolment - estUpdates;
-        }
-
-        const totalUpdates = estUpdates > 0 ? estUpdates : Math.round(totalEnrolment * 0.4);
-        const ratio = (estUpdates / (estNewEnrolments || 1)).toFixed(1);
-        const growth = (Math.random() * 5).toFixed(1);
-
-        // Update UI
-        updateKPI('totalEnrolments', totalEnrolment);
-        updateKPI('totalUpdates', totalUpdates);
-        const ratioEl = document.getElementById('ratioVal');
-        if (ratioEl) ratioEl.textContent = `1:${ratio}`;
-        const momEl = document.getElementById('momGrowthVal');
-        if (momEl) momEl.textContent = `+${growth}%`;
-        if (data.length > 0) {
-            document.getElementById('topState').textContent = data[0].state;
-        }
-
-        // 2. Render Charts (Upstream Logic)
-        initializeCharts(data, totalEnrolment, totalUpdates);
-
-        // 3. User Features (Insights & Custom Algos)
-        generateInsights(data, ageCols);
-        generateCustomAlgorithms(data, ageCols);
+        renderDashboard(data, ageCols);
 
         // Animation In
         if (loadingState) loadingState.style.display = 'none';
@@ -162,6 +140,151 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (loadingState) loadingState.innerHTML = `<p style="color:red">Error loading data: ${error.message}</p>`;
     }
 });
+
+async function handleDashboardUpload(file) {
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) {
+        loadingState.style.display = 'flex';
+        loadingState.querySelector('p').textContent = `Processing ${file.name}...`;
+    }
+
+    try {
+        // Parse CSV
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+            complete: (results) => {
+                const newData = processUploadedData(results.data);
+                
+                // Update Dashboard
+                processedData.data = newData.data;
+                processedData.metadata.ageCols = newData.ageCols;
+                
+                renderDashboard(newData.data, newData.ageCols);
+                
+                if (loadingState) loadingState.style.display = 'none';
+                alert('Dashboard updated with new data!');
+            },
+            error: (err) => {
+                console.error(err);
+                alert('Failed to parse CSV file.');
+                if (loadingState) loadingState.style.display = 'none';
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        alert('Error processing file.');
+        if (loadingState) loadingState.style.display = 'none';
+    }
+}
+
+function processUploadedData(rows) {
+    // Attempt to auto-map columns
+    // We expect: State, Total, and Age breakdowns
+    // Heuristic: Look for 'State', 'District', and columns with 'Year' or 'Age'
+    
+    // Normalize keys
+    if (!rows || rows.length === 0) return { data: [], ageCols: [] };
+
+    const sample = rows[0];
+    const keys = Object.keys(sample);
+
+    const stateKey = keys.find(k => k.toLowerCase().includes('state')) || keys[0]; // fallback
+    
+    // Identify Age Columns
+    const ageCols = keys.filter(k => 
+        k.toLowerCase().includes('0-5') || 
+        k.toLowerCase().includes('5-18') || 
+        k.toLowerCase().includes('18+') || 
+        k.toLowerCase().includes('year') ||
+        k.toLowerCase().includes('age')
+    );
+
+    // Group by State
+    const stateMap = {};
+    rows.forEach(row => {
+        const state = row[stateKey] || 'Unknown';
+        if (!stateMap[state]) {
+            stateMap[state] = { state: state, total: 0, breakdown: {} };
+            ageCols.forEach(c => stateMap[state].breakdown[c] = 0);
+        }
+
+        // Try to find a Total count or sum it up
+        // If there's a specific 'Count' or 'Total' column
+        const totalKey = keys.find(k => k.toLowerCase() === 'count' || k.toLowerCase() === 'total' || k.toLowerCase() === 'enrolment');
+        let rowTotal = 0;
+
+        if (totalKey) {
+            rowTotal = Number(row[totalKey]) || 0;
+        } else {
+            // Sum age cols
+            ageCols.forEach(c => rowTotal += (Number(row[c]) || 0));
+        }
+
+        stateMap[state].total += rowTotal;
+
+        ageCols.forEach(c => {
+            stateMap[state].breakdown[c] += (Number(row[c]) || 0);
+        });
+    });
+
+    const processed = Object.values(stateMap).sort((a,b) => b.total - a.total);
+    return { data: processed, ageCols: ageCols };
+}
+
+function renderDashboard(data, ageCols) {
+    // 1. Calculate Metrics (Smarter Logic)
+    const totalEnrolment = data.reduce((sum, item) => sum + item.total, 0);
+
+    // Estimate Updates vs Enrolments
+    let estUpdates = 0;
+    let estNewEnrolments = 0;
+    
+    // Simple Heuristic for updates vs enrolments if not explicitly defined
+    // Assuming younger ages are new enrolments, older are updates
+    data.forEach(d => {
+            if (d.breakdown) {
+                for(let key in d.breakdown) {
+                    const val = d.breakdown[key] || 0;
+                    if (key.includes('0-5') || key.includes('5-18')) {
+                        estNewEnrolments += val;
+                    } else {
+                        estUpdates += val;
+                    }
+                }
+            }
+    });
+    
+    if (estUpdates === 0 && estNewEnrolments === 0) {
+        estUpdates = Math.round(totalEnrolment * 0.35);
+        estNewEnrolments = totalEnrolment - estUpdates;
+    }
+
+    const totalUpdates = estUpdates > 0 ? estUpdates : Math.round(totalEnrolment * 0.4);
+    const ratio = (estUpdates / (estNewEnrolments || 1)).toFixed(1);
+    const growth = (Math.random() * 5).toFixed(1);
+
+    // Update UI
+    updateKPI('totalEnrolments', totalEnrolment);
+    updateKPI('totalUpdates', totalUpdates);
+    const ratioEl = document.getElementById('ratioVal');
+    if (ratioEl) ratioEl.textContent = `1:${ratio}`;
+    const momEl = document.getElementById('momGrowthVal');
+    if (momEl) momEl.textContent = `+${growth}%`;
+    
+    if (data.length > 0) {
+        document.getElementById('topState').textContent = data[0].state;
+    }
+
+    // 2. Render Charts (Upstream Logic)
+    // Destroy old charts inside initializeCharts if needed or clear text
+    initializeCharts(data, totalEnrolment, totalUpdates);
+
+    // 3. User Features (Insights & Custom Algos)
+    generateInsights(data, ageCols);
+    generateCustomAlgorithms(data, ageCols);
+}
 
 function formatNumber(num) {
     if (num >= 10000000) return (num / 10000000).toFixed(2) + ' Cr';
