@@ -97,19 +97,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingState = document.getElementById('loadingState');
     const dashboardContent = document.getElementById('dashboardContent');
     const uploadLink = document.getElementById('uploadLink');
-    const fileInput = document.getElementById('dashboardFileUpload');
 
-    // Handle Upload Click
-    if (uploadLink && fileInput) {
+    // Handle Upload Click - redirect to upload page
+    if (uploadLink) {
         uploadLink.addEventListener('click', (e) => {
             e.preventDefault();
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleDashboardUpload(e.target.files[0]);
-            }
+            window.location.href = 'upload.html';
         });
     }
 
@@ -117,15 +110,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (dashboardContent) dashboardContent.style.opacity = '0'; // Hide initially
 
     try {
-        // Use hardcoded processedData directly by default
-        let data = processedData.data;
+        let data = null;
+        let ageCols = [];
+
+        // Try to load from IndexedDB first (uploaded data)
+        try {
+            const dbData = await getDataFromDB();
+            console.log('Raw DB data:', dbData);
+            
+            // Check if dbData has valid structure with actual data values > 0
+            if (dbData && dbData.data && Array.isArray(dbData.data) && dbData.data.length > 0) {
+                // Validate that the data has actual values (not all zeros)
+                const hasValidData = dbData.data.some(item => item.total > 0);
+                if (hasValidData) {
+                    data = dbData.data;
+                    ageCols = dbData.metadata?.ageCols || [];
+                    console.log('Loaded valid data from IndexedDB:', data.length, 'records');
+                } else {
+                    console.warn('IndexedDB data has zero values, using default data');
+                }
+            }
+        } catch (dbError) {
+            console.warn('IndexedDB not available, using default data:', dbError);
+        }
+
+        // Fallback to hardcoded data if no valid uploaded data
+        if (!data || data.length === 0) {
+            console.log('Using hardcoded default data');
+            data = processedData.data;
+            ageCols = processedData.metadata.ageCols || [];
+        }
         
-        // Identify Age Columns (keys that are not 'state' or 'total' or 'breakdown')
-        let ageCols = processedData.metadata.ageCols || [];
+        // Identify Age Columns if not defined
         if ((!ageCols || ageCols.length === 0) && data[0] && data[0].breakdown) {
             ageCols = Object.keys(data[0].breakdown);
         }
 
+        console.log('Final data to render:', data.length, 'records, Age columns:', ageCols);
         renderDashboard(data, ageCols);
 
         // Animation In
@@ -137,7 +158,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error('Dashboard Error:', error);
-        if (loadingState) loadingState.innerHTML = `<p style="color:red">Error loading data: ${error.message}</p>`;
+        // On any error, try to render with default data
+        try {
+            renderDashboard(processedData.data, processedData.metadata.ageCols || []);
+            if (loadingState) loadingState.style.display = 'none';
+            if (dashboardContent) {
+                dashboardContent.style.opacity = '1';
+                dashboardContent.style.transition = 'opacity 0.6s ease';
+            }
+        } catch (e) {
+            if (loadingState) loadingState.innerHTML = `<p style="color:red">Error loading data: ${error.message}</p>`;
+        }
     }
 });
 
